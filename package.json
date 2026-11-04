@@ -1,0 +1,13 @@
+{
+  "name": "edukas-masyithoh",
+  "version": "1.0.0",
+  "private": true,
+  "description": "EduKas — Sistem Keuangan Kelas & Tabungan Siswa SMP Masyithoh Kroya",
+  "scripts": {
+    "generate:config": "node scripts/generate-supabase-config.js",
+    "build": "node scripts/build-static.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

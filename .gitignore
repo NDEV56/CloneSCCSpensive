@@ -21,3 +21,13 @@ android/.idea/
 # OS
 .DS_Store
 Thumbs.db
+
+# Environment dan Secrets
+.env
+.env.*
+!.env.example
+supabase-config.js
+android/app/src/main/assets/supabase-config.js
+
+# Hasil build Vercel
+dist/

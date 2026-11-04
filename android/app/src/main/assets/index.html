@@ -1,17 +1,20 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>EduKas — SMP Masyithoh Kroya | Sistem Keuangan Kelas & Tabungan Siswa</title>
   <link rel="icon" type="image/png" href="assets/logo.png" />
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
   <!-- File CSS Eksternal -->
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
 
   <!-- Background Orbs untuk Efek Glassmorphism -->
@@ -22,28 +25,11 @@
     <div class="orb orb-4"></div>
   </div>
 
-  <!-- Bar Simulasi Pindah Cepat (Untuk Kemudahan Testing Prototype) -->
-  <div class="demo-bar glass-panel">
-    <div class="demo-bar-left">
-      <div class="demo-school-badge">
-        <img src="assets/logo.png" alt="Logo SMP Masyithoh Kroya" class="demo-logo-mini" />
-        <span>SMP MASYITHOH KROYA</span>
-      </div>
-      <span class="pulse-dot"></span>
-      <span style="font-size: 0.8rem; opacity: 0.85;">EduKas Glass</span>
-    </div>
-    <div class="demo-bar-actions">
-      <button type="button" class="btn-chip" onclick="quickDemo('guru')">Simulasi Guru (Admin)</button>
-      <button type="button" class="btn-chip btn-chip-emerald" onclick="quickDemo('ortu')">Simulasi Orang Tua</button>
-      <button type="button" class="btn-chip btn-chip-outline" onclick="logout()">Halaman Login</button>
-    </div>
-  </div>
-
   <!-- Notifikasi Toast -->
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- =========================================================
-       VIEW 1: HALAMAN LOGIN & REGISTRASI (2 PORTAL BERBEDA)
+       VIEW 1: HALAMAN LOGIN / DAFTAR
        ========================================================= -->
   <main id="viewAuth" class="view-section active">
     <div class="auth-wrapper">
@@ -53,66 +39,243 @@
         </div>
         <div>
           <h1>SMP Masyithoh Kroya</h1>
-          <p>EduKas Glass — Sistem Manajemen Kas Kelas & Tabungan Siswa</p>
+          <p>Sistem Manajemen Kas Kelas & Tabungan Siswa</p>
         </div>
       </div>
 
-      <!-- Pilihan Portal: Guru vs Orang Tua -->
-      <div class="portal-switcher glass-panel">
-        <button type="button" id="tabRoleGuru" class="portal-tab active-guru" onclick="setAuthRole('guru')">
-          <span class="portal-icon">👨‍🏫</span>
-          <div>
-            <strong>Portal Guru / Wali Kelas</strong>
-            <small>Admin Pengelola Kas & Rekening</small>
-          </div>
-        </button>
-        <button type="button" id="tabRoleOrtu" class="portal-tab" onclick="setAuthRole('ortu')">
-          <span class="portal-icon">👪</span>
-          <div>
-            <strong>Portal Orang Tua</strong>
-            <small>Pantau Kas & Transfer Jarak Jauh</small>
-          </div>
-        </button>
-      </div>
-
-      <!-- Card Form Login / Daftar -->
       <div class="glass-card auth-card">
-        <div class="auth-mode-tabs">
-          <button type="button" id="modeLoginBtn" class="mode-tab active" onclick="setAuthMode('login')">Masuk Akun</button>
-          <button type="button" id="modeRegBtn" class="mode-tab" onclick="setAuthMode('register')">Daftar Baru (Tanpa Email Sekolah)</button>
-        </div>
-
-        <div id="authRoleBanner" class="role-banner banner-guru">
-          <strong>Akses Portal Guru (Admin)</strong>
-          <p>Gunakan Nomor HP/WA, Username, atau Email pribadi untuk masuk dan mengelola rekening kelas.</p>
+        <div class="auth-heading">
+          <h2 id="authFormTitle">Masuk ke Akun</h2>
+          <p id="authFormSubtitle">Gunakan username, nomor HP, atau email yang terdaftar.</p>
         </div>
 
         <form id="authForm" onsubmit="handleAuthSubmit(event)">
-          <!-- Field Tambahan Saat Registrasi -->
+          <!-- Field tambahan saat daftar -->
           <div id="regNameGroup" class="form-group hidden">
-            <label id="regNameLabel">Nama Lengkap Guru & Gelar</label>
-            <input type="text" id="regFullName" class="glass-input" placeholder="Contoh: Budi Santoso, S.Pd." />
+            <label for="regFullName">Nama Lengkap</label>
+            <input type="text" id="regFullName" class="glass-input" placeholder="Contoh: Budi Santoso" />
           </div>
 
           <div id="regChildGroup" class="form-group hidden">
-            <label>Nama Siswa (Anak)</label>
+            <label for="regChildName">Nama Siswa (Anak)</label>
             <input type="text" id="regChildName" class="glass-input" placeholder="Contoh: Raka Pratama" />
           </div>
 
           <div class="form-group">
-            <label>Nomor HP / WhatsApp / Email Bebas / Username</label>
-            <input type="text" id="authIdentity" class="glass-input" placeholder="Contoh: 081234567890 atau nama@gmail.com" required />
+            <label for="authIdentity">Username / Nomor HP / Email</label>
+            <input type="text" id="authIdentity" class="glass-input" autocomplete="username"
+              placeholder="Contoh: 081234567890 atau nama@gmail.com" required />
           </div>
 
           <div class="form-group">
-            <label>Kata Sandi</label>
-            <input type="password" id="authPassword" class="glass-input" placeholder="Masukkan kata sandi..." required />
+            <label for="authPassword">Kata Sandi</label>
+            <input type="password" id="authPassword" class="glass-input" autocomplete="current-password"
+              placeholder="Masukkan kata sandi..." required />
+          </div>
+
+          <div id="regConfirmPasswordGroup" class="form-group hidden">
+            <label for="regConfirmPassword">Ulangi Kata Sandi</label>
+            <input type="password" id="regConfirmPassword" class="glass-input" autocomplete="new-password"
+              placeholder="Ulangi kata sandi..." />
           </div>
 
           <button type="submit" id="authSubmitBtn" class="glass-btn btn-primary-guru full-width">
-            Masuk ke Portal Guru →
+            Masuk →
           </button>
         </form>
+
+        <div class="auth-alt-action">
+          <span id="authSwitchPrompt">Belum punya akun?</span>
+          <button type="button" id="authSwitchBtn" class="link-accent" onclick="toggleAuthMode()">Sign Up</button>
+        </div>
+        <div class="auth-alt-action auth-alt-secondary">
+          <button type="button" class="link-muted" onclick="openForgotPassword()">Lupa kata sandi?</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- =========================================================
+       VIEW 1B: VERIFIKASI KUNCI IZIN ADMIN (LANGKAH 2)
+       ========================================================= -->
+  <main id="viewAdminKey" class="view-section">
+    <div class="auth-wrapper">
+      <div class="brand-header">
+        <div class="logo-badge">
+          <img src="assets/logo.png" alt="Logo SMP Masyithoh Kroya" class="brand-logo-img" />
+        </div>
+        <div>
+          <h1>SMP Masyithoh Kroya</h1>
+          <p>Verifikasi keamanan admin</p>
+        </div>
+      </div>
+
+      <div class="glass-card auth-card">
+        <div class="security-icon">🔐</div>
+        <div class="auth-heading auth-heading-center">
+          <h2>Kunci Izin Admin</h2>
+          <p>Akun ini memiliki akses admin. Masukkan kunci izin untuk melanjutkan ke dashboard.</p>
+        </div>
+
+        <form onsubmit="handleAdminKeySubmit(event)">
+          <div class="form-group">
+            <label for="adminAccessKey">Kunci Izin Admin</label>
+            <input type="password" id="adminAccessKey" class="glass-input" autocomplete="off"
+              placeholder="Masukkan kunci izin admin..." required />
+            <small class="field-hint">Kunci ini diatur di Environment Variables, bukan di database.</small>
+          </div>
+          <button type="submit" id="adminKeySubmitBtn" class="glass-btn btn-primary-guru full-width">
+            Buka Akses Admin →
+          </button>
+        </form>
+
+        <div class="auth-alt-action auth-alt-secondary">
+          <button type="button" class="link-muted" onclick="logout()">Batal & keluar</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- =========================================================
+       VIEW 1C: TAMPILKAN KODE PEMULIHAN (SEKALI SAJA)
+       ========================================================= -->
+  <main id="viewRecoveryCode" class="view-section">
+    <div class="auth-wrapper">
+      <div class="brand-header">
+        <div class="logo-badge">
+          <img src="assets/logo.png" alt="Logo SMP Masyithoh Kroya" class="brand-logo-img" />
+        </div>
+        <div>
+          <h1>SMP Masyithoh Kroya</h1>
+          <p>Kode pemulihan akun</p>
+        </div>
+      </div>
+
+      <div class="glass-card auth-card">
+        <div class="security-icon">🗝️</div>
+        <div class="auth-heading auth-heading-center">
+          <h2>Simpan Kode Pemulihan</h2>
+          <p>Kode ini hanya ditampilkan sekali. Simpan di tempat aman untuk mengganti sandi jika lupa. Jangan berikan kepada siapa pun.</p>
+        </div>
+
+        <div id="recoveryCodeDisplay" class="recovery-code-display">XXXX-XXXX-XXXX-XXXX</div>
+
+        <button type="button" class="glass-btn btn-outline full-width" onclick="copyRecoveryCode()">
+          Salin Kode
+        </button>
+        <button type="button" class="glass-btn btn-primary-guru full-width mt-12" onclick="finishRecoveryCode()">
+          Saya sudah menyimpan kode →
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- =========================================================
+       VIEW 1D: LUPA KATA SANDI
+       ========================================================= -->
+  <main id="viewForgotPassword" class="view-section">
+    <div class="auth-wrapper">
+      <div class="brand-header">
+        <div class="logo-badge">
+          <img src="assets/logo.png" alt="Logo SMP Masyithoh Kroya" class="brand-logo-img" />
+        </div>
+        <div>
+          <h1>SMP Masyithoh Kroya</h1>
+          <p>Pemulihan akun tanpa email</p>
+        </div>
+      </div>
+
+      <div class="glass-card auth-card">
+        <div class="auth-heading">
+          <h2>Lupa Kata Sandi</h2>
+          <p>Masukkan username dan kode pemulihan Anda, lalu buat kata sandi baru.</p>
+        </div>
+
+        <form onsubmit="handleForgotPassword(event)">
+          <div class="form-group">
+            <label for="forgotIdentity">Username / Nomor HP / Email</label>
+            <input type="text" id="forgotIdentity" class="glass-input" autocomplete="username" required />
+          </div>
+          <div class="form-group">
+            <label for="forgotRecoveryCode">Kode Pemulihan</label>
+            <input type="text" id="forgotRecoveryCode" class="glass-input" autocomplete="off"
+              placeholder="Contoh: ABCD-EFGH-JKLM-NPQR" required />
+          </div>
+          <div class="form-group">
+            <label for="forgotNewPassword">Kata Sandi Baru</label>
+            <input type="password" id="forgotNewPassword" class="glass-input" autocomplete="new-password"
+              placeholder="Minimal 8 karakter" required />
+          </div>
+          <div class="form-group">
+            <label for="forgotConfirmPassword">Ulangi Kata Sandi Baru</label>
+            <input type="password" id="forgotConfirmPassword" class="glass-input" autocomplete="new-password"
+              placeholder="Ulangi kata sandi baru" required />
+          </div>
+          <button type="submit" id="forgotSubmitBtn" class="glass-btn btn-primary-guru full-width">
+            Simpan Kata Sandi Baru →
+          </button>
+        </form>
+
+        <div class="auth-alt-action auth-alt-secondary">
+          <button type="button" class="link-accent" onclick="backToLogin()">← Kembali ke Login</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- =========================================================
+       VIEW 1E: GANTI KATA SANDI (SETELAH LOGIN)
+       ========================================================= -->
+  <main id="viewChangePassword" class="view-section">
+    <div class="auth-wrapper">
+      <div class="brand-header">
+        <div class="logo-badge">
+          <img src="assets/logo.png" alt="Logo SMP Masyithoh Kroya" class="brand-logo-img" />
+        </div>
+        <div>
+          <h1>SMP Masyithoh Kroya</h1>
+          <p>Keamanan akun</p>
+        </div>
+      </div>
+
+      <div class="glass-card auth-card">
+        <div class="auth-heading">
+          <h2>Ganti Kata Sandi</h2>
+          <p>Masukkan kata sandi lama, lalu kata sandi baru. Perubahan langsung tersimpan.</p>
+        </div>
+
+        <form onsubmit="handleChangePassword(event)">
+          <div class="form-group">
+            <label for="currentPassword">Kata Sandi Lama</label>
+            <input type="password" id="currentPassword" class="glass-input" autocomplete="current-password"
+              required />
+          </div>
+          <div class="form-group">
+            <label for="newPassword">Kata Sandi Baru</label>
+            <input type="password" id="newPassword" class="glass-input" autocomplete="new-password"
+              placeholder="Minimal 8 karakter" required />
+          </div>
+          <div class="form-group">
+            <label for="confirmNewPassword">Ulangi Kata Sandi Baru</label>
+            <input type="password" id="confirmNewPassword" class="glass-input" autocomplete="new-password"
+              required />
+          </div>
+          <button type="submit" id="changePasswordSubmitBtn" class="glass-btn btn-primary-guru full-width">
+            Simpan Kata Sandi →
+          </button>
+        </form>
+
+        <div class="recovery-box">
+          <strong>🗝️ Kode Pemulihan</strong>
+          <p>Buat kode baru jika Anda belum pernah menyimpannya. Kode lama otomatis tidak berlaku.</p>
+          <button type="button" class="glass-btn btn-outline full-width" onclick="createNewRecoveryCode()">
+            Buat Kode Pemulihan Baru
+          </button>
+        </div>
+
+        <div class="auth-alt-action auth-alt-secondary">
+          <button type="button" class="link-accent" onclick="backFromChangePassword()">← Kembali</button>
+        </div>
       </div>
     </div>
   </main>
@@ -128,13 +291,14 @@
             <img src="assets/logo.png" alt="Logo SMP Masyithoh Kroya" />
           </div>
           <div>
-            <span id="classSelectRoleBadge" class="badge badge-indigo">Portal Guru</span>
+            <span id="classSelectRoleBadge" class="badge badge-indigo">PILIH KELAS</span>
             <h2 id="classSelectGreeting">Pilih Ruang Kelas Anda</h2>
             <p>SMP Masyithoh Kroya — Pilih kelas terlebih dahulu sebelum masuk ke dashboard kas & rekening.</p>
           </div>
         </div>
         <div class="filter-controls">
-          <input type="text" id="searchClassInput" class="glass-input" placeholder="Cari kelas atau wali kelas..." oninput="renderClassCards()" />
+          <input type="text" id="searchClassInput" class="glass-input" placeholder="Cari kelas atau wali kelas..."
+            oninput="renderClassCards()" />
           <select id="gradeFilterSelect" class="glass-input" onchange="renderClassCards()">
             <option value="ALL">Semua Tingkat (VII, VIII, IX)</option>
             <option value="VII">Kelas VII (Tujuh)</option>
@@ -166,6 +330,7 @@
           </div>
         </div>
         <div class="topbar-actions">
+          <button type="button" class="glass-btn btn-outline" onclick="openChangePassword()">Ganti Sandi</button>
           <button type="button" class="glass-btn btn-outline" onclick="goToClassSelect()">Ganti Kelas</button>
           <button type="button" class="glass-btn btn-danger" onclick="logout()">Keluar</button>
         </div>
@@ -197,7 +362,7 @@
           <section class="glass-card">
             <div class="section-head">
               <h3>🏦 Rekening Resmi Wali Kelas</h3>
-              <span class="badge badge-cyan">Tampil di Portal Orang Tua</span>
+              <span class="badge badge-cyan">Tampil di Halaman Orang Tua</span>
             </div>
             <p class="section-desc">Orang tua akan mentransfer dana jarak jauh ke nomor rekening ini.</p>
             <form onsubmit="handleUpdateBank(event)" class="form-stack">
@@ -246,12 +411,14 @@
                 </div>
                 <div class="form-group">
                   <label>Nominal (Rp)</label>
-                  <input type="number" id="cashAmount" class="glass-input" placeholder="Contoh: 50000" min="1000" required />
+                  <input type="number" id="cashAmount" class="glass-input" placeholder="Contoh: 50000" min="1000"
+                    required />
                 </div>
               </div>
               <div class="form-group">
                 <label>Keterangan Penggunaan / Sumber Dana</label>
-                <input type="text" id="cashDesc" class="glass-input" placeholder="Contoh: Beli spidol & penghapus papan tulis" required />
+                <input type="text" id="cashDesc" class="glass-input"
+                  placeholder="Contoh: Beli spidol & penghapus papan tulis" required />
               </div>
               <button type="submit" class="glass-btn btn-primary-guru">Catat ke Pembukuan Kelas</button>
             </form>
@@ -263,8 +430,10 @@
               <h3>📌 Tambah Program Iuran / Tagihan Kelas</h3>
             </div>
             <form onsubmit="handleAddBill(event)" class="form-row-2">
-              <input type="text" id="billTitleInput" class="glass-input" placeholder="Nama Iuran (Misal: Kas Bulan Mei)" required />
-              <input type="number" id="billNominalInput" class="glass-input" placeholder="Nominal (Rp)" min="1000" required />
+              <input type="text" id="billTitleInput" class="glass-input" placeholder="Nama Iuran (Misal: Kas Bulan Mei)"
+                required />
+              <input type="number" id="billNominalInput" class="glass-input" placeholder="Nominal (Rp)" min="1000"
+                required />
               <button type="submit" class="glass-btn btn-outline full-span">+ Tambah Program Iuran</button>
             </form>
           </section>
@@ -293,12 +462,13 @@
             <img src="assets/logo.png" alt="Logo SMP Masyithoh Kroya" />
           </div>
           <div class="topbar-info">
-            <span class="badge badge-emerald">PORTAL ORANG TUA • SMP MASYITHOH KROYA</span>
+            <span class="badge badge-emerald">ORANG TUA / WALI MURID • SMP MASYITHOH KROYA</span>
             <h2 id="ortuClassTitle">Kelas VIII-A</h2>
             <p id="ortuStudentLabel">Orang Tua / Wali Murid</p>
           </div>
         </div>
         <div class="topbar-actions">
+          <button type="button" class="glass-btn btn-outline" onclick="openChangePassword()">Ganti Sandi</button>
           <button type="button" class="glass-btn btn-outline" onclick="goToClassSelect()">Ganti Kelas</button>
           <button type="button" class="glass-btn btn-danger" onclick="logout()">Keluar</button>
         </div>
@@ -345,7 +515,8 @@
               </div>
             </div>
             <p class="readonly-note">
-              ℹ️ Sebagai orang tua, Anda dapat memantau seluruh mutasi uang kelas secara transparan. Untuk melakukan pembayaran kas atau tabungan dari jarak jauh, tekan tombol <strong>(+)</strong> di bagian bawah layar.
+              ℹ️ Sebagai orang tua, Anda dapat memantau seluruh mutasi uang kelas secara transparan. Untuk melakukan
+              pembayaran kas atau tabungan dari jarak jauh, tekan tombol <strong>(+)</strong> di bagian bawah layar.
             </p>
           </section>
         </div>
@@ -397,7 +568,8 @@
               <div class="form-row-2">
                 <div class="form-group">
                   <label>Nama Siswa (Anak)</label>
-                  <input type="text" id="tfStudentName" class="glass-input" placeholder="Contoh: Raka Pratama" required />
+                  <input type="text" id="tfStudentName" class="glass-input" placeholder="Contoh: Raka Pratama"
+                    required />
                 </div>
                 <div class="form-group">
                   <label>Keperluan Pembayaran</label>
@@ -407,7 +579,8 @@
 
               <div class="form-group">
                 <label>Nominal Transfer (Rp)</label>
-                <input type="number" id="tfAmount" class="glass-input" placeholder="Masukkan nominal transfer" min="5000" required />
+                <input type="number" id="tfAmount" class="glass-input" placeholder="Masukkan nominal transfer"
+                  min="5000" required />
                 <div class="quick-nominal-row">
                   <button type="button" class="chip-nominal" onclick="setQuickAmount(20000)">Rp 20.000</button>
                   <button type="button" class="chip-nominal" onclick="setQuickAmount(50000)">Rp 50.000</button>
@@ -429,7 +602,8 @@
                 </div>
                 <div class="form-group">
                   <label>Referensi / Bukti Transfer</label>
-                  <input type="text" id="tfNote" class="glass-input" placeholder="Contoh: Lunas Kas & Tabungan Raka" required />
+                  <input type="text" id="tfNote" class="glass-input" placeholder="Contoh: Lunas Kas & Tabungan Raka"
+                    required />
                 </div>
               </div>
 
@@ -461,7 +635,8 @@
       </button>
 
       <!-- Tombol Plus (+) Khusus Masuk Halaman Kirim Dana -->
-      <button type="button" id="navOrtuPlus" class="nav-plus-btn" onclick="switchOrtuTab('transfer')" title="Kirim Dana / Transfer">
+      <button type="button" id="navOrtuPlus" class="nav-plus-btn" onclick="switchOrtuTab('transfer')"
+        title="Kirim Dana / Transfer">
         <span class="plus-symbol">+</span>
       </button>
 
@@ -472,7 +647,15 @@
     </nav>
   </main>
 
-  <!-- File JavaScript Eksternal -->
+  <!-- Supabase SDK via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Konfigurasi Supabase (di-generate dari .env) -->
+  <script src="supabase-config.js"></script>
+
+  <!-- Supabase Init & App Logic -->
+  <script src="supabase-init.js"></script>
   <script src="index.js"></script>
 </body>
+
 </html>
