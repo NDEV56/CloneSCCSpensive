@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="accent_lime">#74F21B</color>
+    <color name="accent_yellow">#F2E41D</color>
+    <color name="primary_dark">#041203</color>
+    <color name="primary_forest">#055902</color>
+    <color name="white">#F2F2F2</color>
+    <string name="app_name">EduKas SMP Masyithoh</string>
+    <style name="Theme.EduKasMasyithoh" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        
+        <item name="colorPrimary">@color/primary_forest</item>
+        <item name="colorPrimaryVariant">@color/primary_dark</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="android:statusBarColor">@color/primary_forest</item>
+        <item name="android:navigationBarColor">@color/primary_dark</item>
+    </style>
+</resources>

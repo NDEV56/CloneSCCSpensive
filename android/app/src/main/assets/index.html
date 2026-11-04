@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EduKas — SMP Masyithoh Kroya | Sistem Keuangan Kelas & Tabungan Siswa</title>
+  <link rel="icon" type="image/png" href="assets/logo.png" />
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- File CSS Eksternal -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Background Orbs untuk Efek Glassmorphism -->
+  <div class="ambient-bg">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    <div class="orb orb-4"></div>
+  </div>
+
+  <!-- Bar Simulasi Pindah Cepat (Untuk Kemudahan Testing Prototype) -->
+  <div class="demo-bar glass-panel">
+    <div class="demo-bar-left">
+      <div class="demo-school-badge">
+        <img src="assets/logo.png" alt="Logo SMP Masyithoh Kroya" class="demo-logo-mini" />
+        <span>SMP MASYITHOH KROYA</span>
+      </div>
+      <span class="pulse-dot"></span>
+      <span style="font-size: 0.8rem; opacity: 0.85;">EduKas Glass</span>
+    </div>
+    <div class="demo-bar-actions">
+      <button type="button" class="btn-chip" onclick="quickDemo('guru')">Simulasi Guru (Admin)</button>
+      <button type="button" class="btn-chip btn-chip-emerald" onclick="quickDemo('ortu')">Simulasi Orang Tua</button>
+      <button type="button" class="btn-chip btn-chip-outline" onclick="logout()">Halaman Login</button>
+    </div>
+  </div>
+
+  <!-- Notifikasi Toast -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- =========================================================
+       VIEW 1: HALAMAN LOGIN & REGISTRASI (2 PORTAL BERBEDA)
+       ========================================================= -->
+  <main id="viewAuth" class="view-section active">
+    <div class="auth-wrapper">
+      <div class="brand-header">
+        <div class="logo-badge">
+          <img src="assets/logo.png" alt="Logo SMP Masyithoh Kroya" class="brand-logo-img" />
+        </div>
+        <div>
+          <h1>SMP Masyithoh Kroya</h1>
+          <p>EduKas Glass — Sistem Manajemen Kas Kelas & Tabungan Siswa</p>
+        </div>
+      </div>
+
+      <!-- Pilihan Portal: Guru vs Orang Tua -->
+      <div class="portal-switcher glass-panel">
+        <button type="button" id="tabRoleGuru" class="portal-tab active-guru" onclick="setAuthRole('guru')">
+          <span class="portal-icon">👨‍🏫</span>
+          <div>
+            <strong>Portal Guru / Wali Kelas</strong>
+            <small>Admin Pengelola Kas & Rekening</small>
+          </div>
+        </button>
+        <button type="button" id="tabRoleOrtu" class="portal-tab" onclick="setAuthRole('ortu')">
+          <span class="portal-icon">👪</span>
+          <div>
+            <strong>Portal Orang Tua</strong>
+            <small>Pantau Kas & Transfer Jarak Jauh</small>
+          </div>
+        </button>
+      </div>
+
+      <!-- Card Form Login / Daftar -->
+      <div class="glass-card auth-card">
+        <div class="auth-mode-tabs">
+          <button type="button" id="modeLoginBtn" class="mode-tab active" onclick="setAuthMode('login')">Masuk Akun</button>
+          <button type="button" id="modeRegBtn" class="mode-tab" onclick="setAuthMode('register')">Daftar Baru (Tanpa Email Sekolah)</button>
+        </div>
+
+        <div id="authRoleBanner" class="role-banner banner-guru">
+          <strong>Akses Portal Guru (Admin)</strong>
+          <p>Gunakan Nomor HP/WA, Username, atau Email pribadi untuk masuk dan mengelola rekening kelas.</p>
+        </div>
+
+        <form id="authForm" onsubmit="handleAuthSubmit(event)">
+          <!-- Field Tambahan Saat Registrasi -->
+          <div id="regNameGroup" class="form-group hidden">
+            <label id="regNameLabel">Nama Lengkap Guru & Gelar</label>
+            <input type="text" id="regFullName" class="glass-input" placeholder="Contoh: Budi Santoso, S.Pd." />
+          </div>
+
+          <div id="regChildGroup" class="form-group hidden">
+            <label>Nama Siswa (Anak)</label>
+            <input type="text" id="regChildName" class="glass-input" placeholder="Contoh: Raka Pratama" />
+          </div>
+
+          <div class="form-group">
+            <label>Nomor HP / WhatsApp / Email Bebas / Username</label>
+            <input type="text" id="authIdentity" class="glass-input" placeholder="Contoh: 081234567890 atau nama@gmail.com" required />
+          </div>
+
+          <div class="form-group">
+            <label>Kata Sandi</label>
+            <input type="password" id="authPassword" class="glass-input" placeholder="Masukkan kata sandi..." required />
+          </div>
+
+          <button type="submit" id="authSubmitBtn" class="glass-btn btn-primary-guru full-width">
+            Masuk ke Portal Guru →
+          </button>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <!-- =========================================================
+       VIEW 2: HALAMAN PEMILIHAN KELAS (INTERSTITIAL)
+       ========================================================= -->
+  <main id="viewClassSelect" class="view-section">
+    <div class="container">
+      <div class="glass-card header-banner">
+        <div class="header-banner-left">
+          <div class="topbar-logo-badge">
+            <img src="assets/logo.png" alt="Logo SMP Masyithoh Kroya" />
+          </div>
+          <div>
+            <span id="classSelectRoleBadge" class="badge badge-indigo">Portal Guru</span>
+            <h2 id="classSelectGreeting">Pilih Ruang Kelas Anda</h2>
+            <p>SMP Masyithoh Kroya — Pilih kelas terlebih dahulu sebelum masuk ke dashboard kas & rekening.</p>
+          </div>
+        </div>
+        <div class="filter-controls">
+          <input type="text" id="searchClassInput" class="glass-input" placeholder="Cari kelas atau wali kelas..." oninput="renderClassCards()" />
+          <select id="gradeFilterSelect" class="glass-input" onchange="renderClassCards()">
+            <option value="ALL">Semua Tingkat (VII, VIII, IX)</option>
+            <option value="VII">Kelas VII (Tujuh)</option>
+            <option value="VIII">Kelas VIII (Delapan)</option>
+            <option value="IX">Kelas IX (Sembilan)</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="classGridContainer" class="class-grid"></div>
+    </div>
+  </main>
+
+  <!-- =========================================================
+       VIEW 3: DASHBOARD GURU / WALI KELAS (ADMIN PENUH)
+       ========================================================= -->
+  <main id="viewGuru" class="view-section">
+    <div class="container">
+      <!-- Top Bar Guru -->
+      <header class="glass-card topbar">
+        <div class="topbar-brand">
+          <div class="topbar-logo-badge">
+            <img src="assets/logo.png" alt="Logo SMP Masyithoh Kroya" />
+          </div>
+          <div class="topbar-info">
+            <span class="badge badge-indigo">ADMIN / WALI KELAS • SMP MASYITHOH KROYA</span>
+            <h2 id="guruClassTitle">Kelas VIII-A</h2>
+            <p id="guruTeacherLabel">Wali Kelas: —</p>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button type="button" class="glass-btn btn-outline" onclick="goToClassSelect()">Ganti Kelas</button>
+          <button type="button" class="glass-btn btn-danger" onclick="logout()">Keluar</button>
+        </div>
+      </header>
+
+      <!-- Statistik Ringkas -->
+      <section class="stats-grid">
+        <div class="glass-card stat-box">
+          <span class="stat-label">Total Saldo Kas Kelas</span>
+          <h3 id="guruStatBalance" class="stat-value text-emerald">Rp 0</h3>
+          <small>Dana aktif siap digunakan</small>
+        </div>
+        <div class="glass-card stat-box">
+          <span class="stat-label">Antrean Verifikasi Transfer</span>
+          <h3 id="guruStatPending" class="stat-value text-amber">0 Kiriman</h3>
+          <small>Menunggu persetujuan wali kelas</small>
+        </div>
+        <div class="glass-card stat-box">
+          <span class="stat-label">Rekening Tujuan Aktif</span>
+          <h3 id="guruStatBank" class="stat-value text-cyan">—</h3>
+          <small id="guruStatHolder">—</small>
+        </div>
+      </section>
+
+      <div class="dashboard-grid">
+        <!-- Kolom Kiri: Pengaturan Rekening & Antrean Verifikasi -->
+        <div class="col-stack">
+          <!-- Pengaturan Rekening Wali Kelas -->
+          <section class="glass-card">
+            <div class="section-head">
+              <h3>🏦 Rekening Resmi Wali Kelas</h3>
+              <span class="badge badge-cyan">Tampil di Portal Orang Tua</span>
+            </div>
+            <p class="section-desc">Orang tua akan mentransfer dana jarak jauh ke nomor rekening ini.</p>
+            <form onsubmit="handleUpdateBank(event)" class="form-stack">
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label>Nama Bank / E-Wallet</label>
+                  <input type="text" id="inputBankName" class="glass-input" required />
+                </div>
+                <div class="form-group">
+                  <label>Nomor Rekening</label>
+                  <input type="text" id="inputBankNumber" class="glass-input" required />
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Atas Nama (Pemilik Rekening)</label>
+                <input type="text" id="inputBankHolder" class="glass-input" required />
+              </div>
+              <button type="submit" class="glass-btn btn-primary-guru">Simpan Perubahan Rekening</button>
+            </form>
+          </section>
+
+          <!-- Antrean Verifikasi Transfer Orang Tua -->
+          <section class="glass-card">
+            <div class="section-head">
+              <h3>📥 Antrean Verifikasi Transfer Orang Tua</h3>
+              <span id="pendingCountBadge" class="badge badge-amber">0 Menunggu</span>
+            </div>
+            <div id="guruPendingList" class="list-stack"></div>
+          </section>
+        </div>
+
+        <!-- Kolom Kanan: Catat Kas Manual & Riwayat Transaksi -->
+        <div class="col-stack">
+          <section class="glass-card">
+            <div class="section-head">
+              <h3>✍️ Catat Mutasi Kas Kelas (Pemasukan / Pengeluaran)</h3>
+            </div>
+            <form onsubmit="handleGuruAddCash(event)" class="form-stack">
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label>Jenis Transaksi</label>
+                  <select id="cashType" class="glass-input">
+                    <option value="IN">Pemasukan (+)</option>
+                    <option value="OUT">Pengeluaran (-)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Nominal (Rp)</label>
+                  <input type="number" id="cashAmount" class="glass-input" placeholder="Contoh: 50000" min="1000" required />
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Keterangan Penggunaan / Sumber Dana</label>
+                <input type="text" id="cashDesc" class="glass-input" placeholder="Contoh: Beli spidol & penghapus papan tulis" required />
+              </div>
+              <button type="submit" class="glass-btn btn-primary-guru">Catat ke Pembukuan Kelas</button>
+            </form>
+          </section>
+
+          <!-- Buat Tagihan / Iuran Baru -->
+          <section class="glass-card">
+            <div class="section-head">
+              <h3>📌 Tambah Program Iuran / Tagihan Kelas</h3>
+            </div>
+            <form onsubmit="handleAddBill(event)" class="form-row-2">
+              <input type="text" id="billTitleInput" class="glass-input" placeholder="Nama Iuran (Misal: Kas Bulan Mei)" required />
+              <input type="number" id="billNominalInput" class="glass-input" placeholder="Nominal (Rp)" min="1000" required />
+              <button type="submit" class="glass-btn btn-outline full-span">+ Tambah Program Iuran</button>
+            </form>
+          </section>
+
+          <!-- Buku Kas Kelas -->
+          <section class="glass-card">
+            <div class="section-head">
+              <h3>📊 Riwayat Pembukuan Kas Kelas</h3>
+            </div>
+            <div id="guruCashHistory" class="list-stack"></div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- =========================================================
+       VIEW 4: PORTAL ORANG TUA (DENGAN HALAMAN TRANSFER TERPISAH)
+       ========================================================= -->
+  <main id="viewOrtu" class="view-section">
+    <div class="container pb-bottom-nav">
+      <!-- Top Bar Orang Tua -->
+      <header class="glass-card topbar">
+        <div class="topbar-brand">
+          <div class="topbar-logo-badge">
+            <img src="assets/logo.png" alt="Logo SMP Masyithoh Kroya" />
+          </div>
+          <div class="topbar-info">
+            <span class="badge badge-emerald">PORTAL ORANG TUA • SMP MASYITHOH KROYA</span>
+            <h2 id="ortuClassTitle">Kelas VIII-A</h2>
+            <p id="ortuStudentLabel">Orang Tua / Wali Murid</p>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button type="button" class="glass-btn btn-outline" onclick="goToClassSelect()">Ganti Kelas</button>
+          <button type="button" class="glass-btn btn-danger" onclick="logout()">Keluar</button>
+        </div>
+      </header>
+
+      <!-- SUB-PAGE 1: BERANDA DASHBOARD ORANG TUA (READ-ONLY) -->
+      <div id="ortuPageDashboard" class="ortu-subpage active">
+        <div class="dashboard-grid">
+          <!-- Kartu Rekening Wali Kelas -->
+          <section class="glass-card bank-showcase">
+            <div class="bank-card-header">
+              <div>
+                <span class="badge badge-emerald">REKENING RESMI WALI KELAS</span>
+                <h3 id="ortuBankName">BANK BRI</h3>
+              </div>
+              <button type="button" class="glass-btn btn-sm" onclick="copyBankNumber()">Salin No. Rek</button>
+            </div>
+            <div class="bank-number-display" id="ortuBankNumber">0029-01-023891-50-2</div>
+            <div class="bank-card-footer">
+              <div>
+                <small>Atas Nama Wali Kelas:</small>
+                <strong id="ortuBankHolder">—</strong>
+              </div>
+              <button type="button" class="glass-btn btn-primary-ortu btn-sm" onclick="switchOrtuTab('transfer')">
+                + Kirim Dana Sekarang
+              </button>
+            </div>
+          </section>
+
+          <!-- Ringkasan Dana Kelas & Tabungan -->
+          <section class="glass-card">
+            <div class="section-head">
+              <h3>💡 Ringkasan Kas & Status Anak</h3>
+              <span class="badge badge-cyan">Read-Only</span>
+            </div>
+            <div class="stats-grid-2">
+              <div class="mini-glass">
+                <small>Saldo Kas Kelas Saat Ini</small>
+                <strong id="ortuClassBalance" class="text-emerald">Rp 0</strong>
+              </div>
+              <div class="mini-glass">
+                <small>Total Dana Terverifikasi Anda</small>
+                <strong id="ortuMyVerifiedTotal" class="text-cyan">Rp 0</strong>
+              </div>
+            </div>
+            <p class="readonly-note">
+              ℹ️ Sebagai orang tua, Anda dapat memantau seluruh mutasi uang kelas secara transparan. Untuk melakukan pembayaran kas atau tabungan dari jarak jauh, tekan tombol <strong>(+)</strong> di bagian bawah layar.
+            </p>
+          </section>
+        </div>
+
+        <div class="dashboard-grid mt-20">
+          <!-- Daftar Tagihan / Program Iuran Kelas -->
+          <section class="glass-card">
+            <div class="section-head">
+              <h3>📋 Program Iuran & Tagihan Kelas Aktif</h3>
+            </div>
+            <div id="ortuBillList" class="list-stack"></div>
+          </section>
+
+          <!-- Transparansi Riwayat Kas Kelas -->
+          <section class="glass-card">
+            <div class="section-head">
+              <h3>🔍 Transparansi Mutasi Kas Kelas</h3>
+            </div>
+            <div id="ortuCashHistory" class="list-stack"></div>
+          </section>
+        </div>
+      </div>
+
+      <!-- SUB-PAGE 2: HALAMAN KHUSUS PENGIRIMAN DANA / TRANSFER JARAK JAUH -->
+      <div id="ortuPageTransfer" class="ortu-subpage">
+        <div class="transfer-page-wrapper">
+          <div class="glass-card">
+            <div class="section-head">
+              <div>
+                <span class="badge badge-emerald">HALAMAN KHUSUS TRANSAKSI</span>
+                <h3>💸 Kirim Dana / Transfer Jarak Jauh ke Wali Kelas</h3>
+              </div>
+              <button type="button" class="glass-btn btn-outline btn-sm" onclick="switchOrtuTab('dashboard')">
+                ← Kembali ke Dashboard
+              </button>
+            </div>
+
+            <!-- Box Info Rekening Tujuan -->
+            <div class="transfer-target-box">
+              <div>
+                <small>Rekening Tujuan Wali Kelas:</small>
+                <h4 id="tfTargetBank">BRI — 0029-01-023891-50-2</h4>
+                <span id="tfTargetHolder">a.n. Wali Kelas</span>
+              </div>
+              <button type="button" class="glass-btn btn-sm" onclick="copyBankNumber()">Salin Rekening</button>
+            </div>
+
+            <form id="parentTransferForm" onsubmit="handleParentTransfer(event)" class="form-stack">
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label>Nama Siswa (Anak)</label>
+                  <input type="text" id="tfStudentName" class="glass-input" placeholder="Contoh: Raka Pratama" required />
+                </div>
+                <div class="form-group">
+                  <label>Keperluan Pembayaran</label>
+                  <select id="tfPurpose" class="glass-input" onchange="syncBillAmount()"></select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Nominal Transfer (Rp)</label>
+                <input type="number" id="tfAmount" class="glass-input" placeholder="Masukkan nominal transfer" min="5000" required />
+                <div class="quick-nominal-row">
+                  <button type="button" class="chip-nominal" onclick="setQuickAmount(20000)">Rp 20.000</button>
+                  <button type="button" class="chip-nominal" onclick="setQuickAmount(50000)">Rp 50.000</button>
+                  <button type="button" class="chip-nominal" onclick="setQuickAmount(100000)">Rp 100.000</button>
+                  <button type="button" class="chip-nominal" onclick="setQuickAmount(150000)">Rp 150.000</button>
+                </div>
+              </div>
+
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label>Metode Pengiriman Anda</label>
+                  <select id="tfMethod" class="glass-input">
+                    <option value="Mobile Banking BCA">Mobile Banking BCA</option>
+                    <option value="BRImo (BRI)">BRImo (BRI)</option>
+                    <option value="Livin by Mandiri">Livin by Mandiri</option>
+                    <option value="BSI Mobile">BSI Mobile</option>
+                    <option value="GoPay / DANA / OVO">E-Wallet (GoPay / DANA / OVO)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Referensi / Bukti Transfer</label>
+                  <input type="text" id="tfNote" class="glass-input" placeholder="Contoh: Lunas Kas & Tabungan Raka" required />
+                </div>
+              </div>
+
+              <button type="submit" class="glass-btn btn-primary-ortu full-width">
+                Kirim Konfirmasi Transfer ke Wali Kelas →
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB-PAGE 3: RIWAYAT KIRIMAN SAYA -->
+      <div id="ortuPageHistory" class="ortu-subpage">
+        <div class="glass-card">
+          <div class="section-head">
+            <h3>🕒 Status Konfirmasi Transfer Anda</h3>
+            <span class="badge badge-cyan">Real-Time Status</span>
+          </div>
+          <div id="ortuTransferHistoryList" class="list-stack"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FLOATING GLASS BOTTOM NAVIGATION DENGAN TOMBOL (+) DI TENGAH -->
+    <nav class="floating-bottom-nav glass-panel">
+      <button type="button" id="navOrtuDashboard" class="nav-item active" onclick="switchOrtuTab('dashboard')">
+        <span class="nav-icon">📊</span>
+        <span class="nav-text">Dashboard</span>
+      </button>
+
+      <!-- Tombol Plus (+) Khusus Masuk Halaman Kirim Dana -->
+      <button type="button" id="navOrtuPlus" class="nav-plus-btn" onclick="switchOrtuTab('transfer')" title="Kirim Dana / Transfer">
+        <span class="plus-symbol">+</span>
+      </button>
+
+      <button type="button" id="navOrtuHistory" class="nav-item" onclick="switchOrtuTab('history')">
+        <span class="nav-icon">🕒</span>
+        <span class="nav-text">Riwayat Saya</span>
+      </button>
+    </nav>
+  </main>
+
+  <!-- File JavaScript Eksternal -->
+  <script src="index.js"></script>
+</body>
+</html>
