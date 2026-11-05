@@ -7,10 +7,28 @@
 
 const EDUKAS_SUPABASE_CONFIG = window.EDUKAS_SUPABASE_CONFIG || {};
 
+// Cadangan bila Environment Variables berisi URL yang salah
+// (mis. masih ada /rest/v1/ atau URL halaman Vercel).
+const FALLBACK_SUPABASE_URL = 'https://dphhvssjzsilemepruvp.supabase.co';
+
+function resolveSupabaseUrl(rawUrl) {
+  const value = String(rawUrl || '').trim().replace(/\/+$/, '');
+
+  if (/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(value)) {
+    return value;
+  }
+
+  console.warn(
+    'SUPABASE_URL tidak valid (' + value + '). Memakai URL cadangan: ' + FALLBACK_SUPABASE_URL
+  );
+  return FALLBACK_SUPABASE_URL;
+}
+
+const RESOLVED_SUPABASE_URL = resolveSupabaseUrl(EDUKAS_SUPABASE_CONFIG.url);
+
 const SUPABASE_READY = Boolean(
-  EDUKAS_SUPABASE_CONFIG.url &&
+  RESOLVED_SUPABASE_URL &&
   EDUKAS_SUPABASE_CONFIG.anonKey &&
-  !EDUKAS_SUPABASE_CONFIG.url.includes('GANTI-') &&
   !EDUKAS_SUPABASE_CONFIG.anonKey.includes('GANTI-')
 );
 
@@ -19,7 +37,7 @@ let supabaseClient = null;
 if (SUPABASE_READY) {
   // window.supabase adalah library dari CDN @supabase/supabase-js
   supabaseClient = window.supabase.createClient(
-    EDUKAS_SUPABASE_CONFIG.url,
+    RESOLVED_SUPABASE_URL,
     EDUKAS_SUPABASE_CONFIG.anonKey,
     {
       auth: {
