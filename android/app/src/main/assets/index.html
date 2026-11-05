@@ -297,6 +297,10 @@
           </div>
         </div>
         <div class="filter-controls">
+          <button type="button" id="classManagerLaunchBtn" class="glass-btn btn-accent-yellow hidden"
+            onclick="openClassManagerModal()">
+            🏫 Manajemen Kelas
+          </button>
           <input type="text" id="searchClassInput" class="glass-input" placeholder="Cari kelas atau wali kelas..."
             oninput="renderClassCards()" />
           <select id="gradeFilterSelect" class="glass-input" onchange="renderClassCards()">
@@ -329,7 +333,6 @@
           </div>
         </div>
         <div class="app-navbar-actions">
-          <button type="button" class="glass-btn btn-accent-yellow" onclick="openClassManagerModal()">🏫 Manajemen Kelas</button>
           <button type="button" class="glass-btn btn-outline" onclick="openChangePassword()">Ganti Sandi</button>
           <button type="button" class="glass-btn btn-outline" onclick="goToClassSelect()">Ganti Kelas</button>
           <button type="button" class="glass-btn btn-danger" onclick="logout()">Keluar</button>
