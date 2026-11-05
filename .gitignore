@@ -26,7 +26,8 @@ Thumbs.db
 .env
 .env.*
 !.env.example
-supabase-config.js
+# supabase-config.js ikut di-commit: isinya hanya anon/publishable key
+# (memang publik) dan ciphertext kunci admin, bukan kunci plaintext.
 android/app/src/main/assets/supabase-config.js
 
 # Hasil build Vercel

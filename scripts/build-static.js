@@ -39,7 +39,26 @@ if (fs.existsSync(assetsDir)) {
   fs.cpSync(assetsDir, path.join(distDir, 'assets'), { recursive: true });
 }
 
-const result = generate({ outputPath: path.join(distDir, 'supabase-config.js') });
+const localConfigPath = path.join(projectRoot, 'supabase-config.js');
+const distConfigPath = path.join(distDir, 'supabase-config.js');
+
+let result;
+
+// Prioritaskan supabase-config.js yang sudah di-generate dari .env.
+// Ini membuat deploy tetap benar walau Environment Variables Vercel salah.
+if (fs.existsSync(localConfigPath)) {
+  fs.copyFileSync(localConfigPath, distConfigPath);
+
+  const configText = fs.readFileSync(localConfigPath, 'utf8');
+  const urlMatch = configText.match(/"url":\s*"([^"]+)"/);
+
+  result = {
+    source: localConfigPath,
+    url: urlMatch ? urlMatch[1] : '(tidak terbaca)',
+  };
+} else {
+  result = generate({ outputPath: distConfigPath });
+}
 
 console.log('');
 console.log('✅ Build selesai. Folder siap deploy: dist/');
