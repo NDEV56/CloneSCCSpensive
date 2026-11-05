@@ -343,6 +343,24 @@ async function updateClassDetails(payload) {
   if (error) throw error;
 }
 
+// Edit data inti kelas saja; pengaturan kas tetap berada di halaman kelas.
+async function updateClassInfo(payload) {
+  const client = requireSupabase();
+  const { error } = await client
+    .from('classes')
+    .update({
+      grade: payload.grade,
+      name: payload.name,
+      homeroom: payload.homeroom,
+      bank_name: payload.bankName,
+      bank_number: payload.bankNumber,
+      bank_holder: payload.bankHolder,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', payload.id);
+  if (error) throw error;
+}
+
 async function deleteClassById(classId) {
   const client = requireSupabase();
   const { error } = await client.from('classes').delete().eq('id', classId);
@@ -354,6 +372,24 @@ async function setClassPassword(classId, password) {
   const { error } = await client.rpc('set_class_password', {
     p_class_id: classId,
     p_password: password
+  });
+  if (error) throw error;
+}
+
+async function verifyClassManagerPassword(password) {
+  const client = requireSupabase();
+  const { data, error } = await client.rpc('verify_class_manager_password', {
+    p_password: password
+  });
+  if (error) throw error;
+  return Boolean(data);
+}
+
+async function setClassManagerPassword(currentPassword, newPassword) {
+  const client = requireSupabase();
+  const { error } = await client.rpc('set_class_manager_password', {
+    p_current_password: currentPassword,
+    p_new_password: newPassword
   });
   if (error) throw error;
 }

@@ -41,11 +41,13 @@ File itu otomatis membuat:
 | `due_payments` | Checklist lunas/belum per orang tua + bukti foto |
 | `notifications` | Inbox notifikasi orang tua (read/unread) |
 | `transfers` | Konfirmasi transfer + tautan anggota/iuran + bukti foto |
+| `class_manager_settings` | Hash bcrypt sandi manajemen kelas (akses hanya via RPC) |
 
 Sekaligus membuat:
 - Row Level Security (RLS) untuk semua tabel
 - Fungsi verifikasi transfer yang atomik (sekaligus update checklist iuran)
 - Fungsi sandi kelas: `set_class_password`, `create_class_with_password`, `join_class_with_password`
+- Fungsi sandi manajemen: `verify_class_manager_password`, `set_class_manager_password`
 - Fungsi iuran/checklist: `create_due`, `admin_mark_due_payment`
 - Fungsi notifikasi: `notify_class_members`, `notify_unpaid_members`
 - Fungsi profil, kode pemulihan, dan reset sandi tanpa email
@@ -57,11 +59,49 @@ Sekaligus membuat:
 > Akun admin hanya bisa dibuat lewat Dashboard Supabase (lihat bagian 4b).
 >
 > **Pembaruan fitur:** jika database sudah pernah dibuat sebelum fitur sandi kelas/iuran/inbox,
-> jalankan ulang **seluruh** `supabase-schema.sql`. Blok nomor 10 bersifat idempotent
+> jalankan ulang **seluruh** `supabase-schema.sql`. Blok nomor 10 dan 11 bersifat idempotent
 > (aman dijalankan berulang) dan akan menambahkan kolom/tabel/fungsi baru tanpa menghapus data.
 >
-> Setelah skema dijalankan, admin perlu membuka **Manajemen Kelas → Sandi** untuk mengatur
-> sandi pada kelas lama. Kelas tanpa sandi tidak bisa dimasuki orang tua.
+> Setelah skema dijalankan, admin perlu membuka **ikon/ tombol Manajemen Kelas di navbar → Sandi**
+> untuk mengatur sandi pada kelas lama. Kelas tanpa sandi tidak bisa dimasuki orang tua.
+>
+> Sandi manajemen awal bawaan database adalah **Manager123**. Segera ganti setelah login pertama
+> lewat popup **Manajemen Kelas → Ganti Sandi Manajemen**.
+
+---
+
+## 2b. Manajemen Kelas & sandi manajemen (wajib diketahui)
+
+Struktur akses:
+
+- **Guru/wali kelas** mengelola kelas yang sedang dibuka dari dalam halaman kelas:
+  rekening, kas, iuran, checklist, anggota, dan notifikasi.
+- **Manager sekolah** mengelola daftar kelas dari tombol **🏫 Manajemen Kelas** di navbar admin.
+  Popup hanya berisi tambah/ubah/hapus kelas, wali kelas, rekening awal, dan sandi kelas.
+- Popup terbuka hanya setelah memasukkan **sandi manajemen** yang disimpan di tabel
+  `class_manager_settings` sebagai hash bcrypt.
+
+Sandi manajemen bawaan:
+
+```text
+Manager123
+```
+
+**Wajib langsung diganti** setelah login pertama:
+
+1. Login sebagai admin/guru.
+2. Klik **🏫 Manajemen Kelas** di navbar.
+3. Masukkan `Manager123`.
+4. Di dalam popup, cari **Ganti Sandi Manajemen**, isi sandi lama dan sandi baru minimal 8 karakter.
+5. Popup otomatis terkunci lagi; gunakan sandi baru untuk membuka berikutnya.
+
+Aturan keamanan:
+
+- Salah memasukkan sandi manajemen 5 kali → terkunci 15 menit.
+- Tabel `class_manager_settings` tidak memiliki policy baca/tulis langsung.
+- Akses hanya lewat RPC `verify_class_manager_password` dan `set_class_manager_password`.
+- Orang tua tidak dapat mengakses popup ini karena RPC hanya mengizinkan role `guru`.
+- Orang tua wajib memasukkan sandi kelas setiap kali membuka kelas, bukan hanya saat pertama bergabung.
 
 ---
 
@@ -279,7 +319,7 @@ Tes orang tua:
 2. Daftar dengan username/nomor HP/email + sandi minimal 8 karakter.
 3. Simpan **kode pemulihan** yang muncul.
 4. Pilih kelas `VIII-A` → masukkan **sandi kelas** dari wali kelas + nama siswa.
-   (Sandi hanya diminta sekali per kelas.)
+   (Sandi diminta setiap kali membuka kelas, bukan hanya saat pertama bergabung.)
 5. Buka menu transfer → pilih iuran → lampirkan **foto bukti** (wajib) → kirim.
 6. Buka **Supabase Dashboard** → **Table Editor** → tabel `transfers` dan `due_payments`,
    pastikan datanya masuk (status `PENDING`).
@@ -289,18 +329,22 @@ Tes admin:
 
 1. Logout → login memakai akun admin (`adminscc@gmail.com` / sandi admin).
 2. Masukkan **Kunci Izin Admin** (`ADMIN_ACCESS_KEY`).
-3. Pilih kelas → tambah/ubah/hapus kelas, atur sandi, atur periode & nominal kas.
-4. Tambah program iuran → notifikasi otomatis masuk ke inbox orang tua.
-5. Buka **Checklist Pembayaran** → centang lunas/belum per orang tua.
-6. Setujui transfer orang tua di **Antrean Verifikasi** → saldo kas bertambah dan
+3. Klik **🏫 Manajemen Kelas** di navbar → masukkan **Sandi Manajemen** (`Manager123` bila belum diganti).
+4. Di popup, tambah/ubah/hapus kelas dan atur sandi kelas.
+5. Pilih kelas → atur periode & nominal kas, tambah iuran, checklist, anggota, atau kirim notifikasi.
+6. Tambah program iuran → notifikasi otomatis masuk ke inbox orang tua.
+7. Buka **Checklist Pembayaran** → centang lunas/belum per orang tua.
+8. Setujui transfer orang tua di **Antrean Verifikasi** → saldo kas bertambah dan
    checklist iuran otomatis menjadi **Lunas**.
-7. Pastikan data orang tua yang bergabung muncul di **Anggota Kelas**.
+9. Pastikan data orang tua yang bergabung muncul di **Anggota Kelas**.
 
 Tes keamanan:
 
 1. Login admin dengan kunci izin yang salah 3 kali → sesi otomatis berakhir.
 2. Login orang tua → tidak ada permintaan kunci izin dan tidak bisa membuka dashboard admin.
 3. Coba gabung kelas dengan sandi salah → ditolak.
+3b. Klik **Manajemen Kelas** dengan sandi manajemen salah 5 kali → terkunci 15 menit.
+3c. Orang tua klik kelas yang sudah pernah dimasuki → tetap diminta sandi kelas.
 4. Buka **Lupa kata sandi** → isi username + kode pemulihan + sandi baru → login dengan sandi baru.
 5. Coba kode pemulihan salah 5 kali → reset terkunci 15 menit.
 
@@ -314,7 +358,8 @@ Tes keamanan:
 | Ubah rekening / periode kas | `classes` |
 | Catat kas masuk/keluar | `classes.balance` + `classes.cash_history` |
 | Buat / hapus kelas | `classes` + `class_secrets` |
-| Gabung kelas dengan sandi | `class_members` |
+| Buka manajemen kelas | `class_manager_settings` via RPC |
+| Gabung/buka kelas dengan sandi | `class_members` via RPC `join_class_with_password` |
 | Tambah program iuran | `dues` + `notifications` |
 | Kirim transfer orang tua | `transfers` + `due_payments` |
 | Upload foto bukti | Storage `payment-proofs` + `transfers.proof_url` |
@@ -368,7 +413,9 @@ Pastikan HP/emulator punya koneksi internet.
 | `Terlalu banyak percobaan. Coba lagi 15 menit lagi.` | Tunggu 15 menit, atau reset kode pemulihan lewat Dashboard Supabase. |
 | `relation "public.classes" does not exist` | Belum menjalankan `supabase-schema.sql`. |
 | `relation "public.class_members" does not exist` (atau `dues`/`due_payments`/`notifications`) | Database lama belum diperbarui. Jalankan ulang **seluruh** `supabase-schema.sql` (blok 10). |
-| Kelas tidak bisa dimasuki orang tua | Admin belum mengatur sandi kelas. Buka **Manajemen Kelas → Sandi**, isi minimal 4 karakter. |
+| Kelas tidak bisa dimasuki orang tua | Admin belum mengatur sandi kelas. Buka tombol **🏫 Manajemen Kelas** di navbar → **Sandi**, minimal 4 karakter. |
+| Popup **Manajemen Kelas** tidak bisa dibuka | Sandi manajemen salah atau database belum memakai skema terbaru. Sandi bawaan adalah `Manager123`; jalankan seluruh `supabase-schema.sql` dan ganti sandi lewat popup. |
+| Popup manajemen terkunci | Salah 5 kali. Tunggu 15 menit atau atur ulang via SQL: `update public.class_manager_settings set failed_attempts = 0, locked_until = null where id = true;` |
 | `Sandi kelas salah` | Sandi berbeda dengan yang diatur admin. Minta wali kelas mengatur ulang sandi. |
 | Upload bukti gagal / `Bucket not found` | Jalankan blok storage di `supabase-schema.sql`, atau buat bucket public `payment-proofs`. |
 | `new row violates row-level security policy` | Role user bukan guru, profil belum dibuat, atau orang tua belum bergabung ke kelas. Cek `profiles` dan `class_members`. |
@@ -384,6 +431,8 @@ Pastikan HP/emulator punya koneksi internet.
 - Kunci izin admin adalah lapisan UI tambahan. Batas keamanan data yang sebenarnya tetap **RLS Supabase**.
 - Sandi kelas disimpan sebagai hash **bcrypt** di `class_secrets`; tabel itu tidak punya policy baca,
   sehingga browser tidak bisa membaca hash-nya. Verifikasi hanya lewat RPC `join_class_with_password`.
+- Sandi manajemen kelas disimpan sebagai hash **bcrypt** di `class_manager_settings`; tabel itu
+  juga tidak punya policy baca/tulis langsung dan diverifikasi lewat RPC dengan batas 5 percobaan / 15 menit.
 - Foto bukti disimpan di bucket `payment-proofs`. Bucket bersifat public agar admin mudah membuka bukti,
   tetapi nama file memakai UUID user + timestamp acak. Jangan mengunggah dokumen sensitif lain ke bucket ini.
 - Admin wajib melewati 2 langkah: sandi akun + kunci izin. Salah 3 kali → sesi diakhiri.

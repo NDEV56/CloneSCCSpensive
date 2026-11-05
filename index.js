@@ -76,6 +76,8 @@ const state = {
   adminAttempts: 0,
   pendingRecoveryCode: '',
   recoveryContinueAction: 'classSelect',
+  classManagerUnlocked: false,
+  joinClassMode: 'join',
   lastActiveView: 'viewClassSelect'
 };
 
@@ -984,9 +986,11 @@ async function logout() {
   state.notifications = [];
   state.selectedDueId = '';
   state.pendingJoinClassId = '';
+  state.classManagerUnlocked = false;
   clearProofFile();
   closeJoinClassModal();
   closeInbox();
+  closeClassManagerModal();
   setAuthMode('login');
 
   const form = document.getElementById('authForm');
@@ -1061,10 +1065,12 @@ function renderClassCards() {
       : '';
 
     let actionLabel = 'Masuk ke ' + escapeHtml(cls.name) + ' →';
-    if (state.authRole === 'ortu' && !joined) {
-      actionLabel = cls.hasPassword
-        ? 'Masukkan Sandi & Gabung →'
-        : 'Sandi Belum Diatur — Hubungi Admin';
+    if (state.authRole === 'ortu') {
+      if (joined || cls.hasPassword) {
+        actionLabel = 'Masukkan Sandi & Buka →';
+      } else {
+        actionLabel = 'Sandi Belum Diatur — Hubungi Admin';
+      }
     }
 
     return `
@@ -1109,12 +1115,11 @@ function selectClassAndEnter(classId) {
   }
 
   if (state.authRole === 'ortu') {
+    // Orang tua wajib memasukkan sandi kelas setiap kali membuka kelas.
     const member = getMyMember(classId);
-    if (!member) {
-      openJoinClassModal(classId);
-      return;
-    }
-    state.currentUser.childName = member.studentName || state.currentUser.childName;
+    state.currentUser.childName = member?.studentName || state.currentUser.childName;
+    openJoinClassModal(classId);
+    return;
   }
 
   state.selectedClassId = classId;
@@ -1142,18 +1147,41 @@ function openJoinClassModal(classId) {
     return;
   }
 
+  const member = getMyMember(classId);
+  const isUnlockMode = Boolean(member);
+  const studentGroup = document.getElementById('joinStudentGroup');
+  const studentInput = document.getElementById('joinStudentName');
+  const title = document.getElementById('joinClassTitle');
+  const submitBtn = document.getElementById('joinClassSubmit');
+
   state.pendingJoinClassId = classId;
-  document.getElementById('joinClassDesc').innerHTML =
-    'Masukkan sandi untuk bergabung ke <strong>' + escapeHtml(cls.name) +
-    '</strong>. Sandi hanya diminta sekali.';
-  document.getElementById('joinStudentName').value = state.currentUser?.childName || '';
+  state.joinClassMode = isUnlockMode ? 'unlock' : 'join';
+
+  studentGroup.classList.toggle('hidden', isUnlockMode);
+  studentInput.required = !isUnlockMode;
+  studentInput.value = member?.studentName || state.currentUser?.childName || '';
+
+  if (isUnlockMode) {
+    title.textContent = '🔐 Buka Kelas';
+    document.getElementById('joinClassDesc').innerHTML =
+      'Masukkan sandi untuk membuka <strong>' + escapeHtml(cls.name) +
+      '</strong>. Sandi diminta setiap kali membuka kelas.';
+    submitBtn.textContent = 'Buka Kelas →';
+  } else {
+    title.textContent = '🔐 Gabung Kelas';
+    document.getElementById('joinClassDesc').innerHTML =
+      'Masukkan nama siswa dan sandi untuk bergabung ke <strong>' + escapeHtml(cls.name) + '</strong>.';
+    submitBtn.textContent = 'Gabung Kelas →';
+  }
+
   document.getElementById('joinClassPassword').value = '';
   document.getElementById('joinClassModal').classList.remove('hidden');
-  setTimeout(() => document.getElementById('joinStudentName').focus(), 60);
+  setTimeout(() => document.getElementById('joinClassPassword').focus(), 60);
 }
 
 function closeJoinClassModal() {
   state.pendingJoinClassId = '';
+  state.joinClassMode = 'join';
   document.getElementById('joinClassModal').classList.add('hidden');
 }
 
@@ -1162,15 +1190,20 @@ async function handleJoinClass(e) {
   if (!requireWritableSession()) return;
 
   const classId = state.pendingJoinClassId;
-  const studentName = document.getElementById('joinStudentName').value.trim();
+  const studentInput = document.getElementById('joinStudentName');
   const password = document.getElementById('joinClassPassword').value;
   const submitBtn = document.getElementById('joinClassSubmit');
+  const isUnlockMode = state.joinClassMode === 'unlock';
+  const member = classId ? getMyMember(classId) : null;
 
   if (!classId) {
     showToast('Pilih kelas terlebih dahulu.');
     return;
   }
-  if (studentName.length < 2) {
+
+  const studentName = isUnlockMode ? (member?.studentName || '') : studentInput.value.trim();
+
+  if (!isUnlockMode && studentName.length < 2) {
     showToast('Nama siswa wajib diisi minimal 2 karakter.');
     return;
   }
@@ -1187,8 +1220,8 @@ async function handleJoinClass(e) {
     await joinClassWithPassword(classId, password, studentName);
     await refreshAllData();
 
-    const member = getMyMember(classId);
-    if (member) state.currentUser.childName = member.studentName;
+    const joinedMember = getMyMember(classId);
+    if (joinedMember) state.currentUser.childName = joinedMember.studentName;
 
     state.selectedClassId = classId;
     state.selectedDueId = getClassDues(classId)[0]?.id || '';
@@ -1196,14 +1229,122 @@ async function handleJoinClass(e) {
     renderOrtuPortal();
     switchOrtuTab('dashboard');
     showView('viewOrtu');
-    showToast('Berhasil bergabung ke kelas. Data Anda sudah masuk ke tabel admin.');
+    showToast(isUnlockMode ? 'Sandi benar. Kelas berhasil dibuka.' : 'Berhasil bergabung ke kelas. Data Anda sudah masuk ke tabel admin.');
   } catch (error) {
-    console.error('Gagal bergabung kelas:', error);
-    showToast('Gagal bergabung: ' + (error.message || 'Sandi kelas salah.'));
+    console.error('Gagal membuka/bergabung kelas:', error);
+    showToast('Gagal membuka kelas: ' + (error.message || 'Sandi kelas salah.'));
     document.getElementById('joinClassPassword').select();
   } finally {
     submitBtn.textContent = originalText;
     submitBtn.disabled = false;
+  }
+}
+
+// =========================================================
+// MANAJEMEN KELAS (POPUP DI LUAR HALAMAN KELAS)
+// =========================================================
+function openClassManagerModal() {
+  if (state.currentUser?.role !== 'guru' || !state.adminVerified) {
+    showToast('Manajemen kelas hanya untuk admin/manager sekolah.');
+    return;
+  }
+
+  state.classManagerUnlocked = false;
+  showClassManagerGate();
+  document.getElementById('classManagerModal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('classManagerPassword').focus(), 60);
+}
+
+function closeClassManagerModal() {
+  state.classManagerUnlocked = false;
+  cancelEditClass();
+  document.getElementById('classManagerModal').classList.add('hidden');
+  document.getElementById('classManagerPassword').value = '';
+}
+
+function showClassManagerGate() {
+  document.getElementById('classManagerGate').classList.remove('hidden');
+  document.getElementById('classManagerPanel').classList.add('hidden');
+}
+
+function showClassManagerPanel() {
+  state.classManagerUnlocked = true;
+  document.getElementById('classManagerGate').classList.add('hidden');
+  document.getElementById('classManagerPanel').classList.remove('hidden');
+  document.getElementById('classManagerPassword').value = '';
+  renderClassManagement();
+}
+
+function lockClassManager() {
+  state.classManagerUnlocked = false;
+  cancelEditClass();
+  showClassManagerGate();
+}
+
+async function handleClassManagerUnlock(e) {
+  e.preventDefault();
+  if (!requireWritableSession()) return;
+
+  const input = document.getElementById('classManagerPassword');
+  const submitBtn = document.getElementById('classManagerUnlockBtn');
+  const password = input.value;
+
+  if (!password || password.length < 8) {
+    showToast('Sandi manajemen minimal 8 karakter.');
+    return;
+  }
+
+  const originalText = submitBtn.textContent;
+  submitBtn.textContent = 'Memeriksa...';
+  submitBtn.disabled = true;
+
+  try {
+    const isValid = await verifyClassManagerPassword(password);
+    if (isValid) {
+      showClassManagerPanel();
+      showToast('Manajemen kelas berhasil dibuka.');
+      return;
+    }
+
+    showToast('Sandi manajemen salah.');
+    input.select();
+  } catch (error) {
+    console.error('Gagal membuka manajemen kelas:', error);
+    showToast(error.message || 'Gagal memverifikasi sandi manajemen.');
+  } finally {
+    submitBtn.textContent = originalText;
+    submitBtn.disabled = false;
+  }
+}
+
+async function handleClassManagerPasswordChange(e) {
+  e.preventDefault();
+  if (!state.classManagerUnlocked || !requireWritableSession()) return;
+
+  const currentPassword = document.getElementById('classManagerCurrentPassword').value;
+  const newPassword = document.getElementById('classManagerNewPassword').value;
+  const confirmPassword = document.getElementById('classManagerConfirmPassword').value;
+
+  if (newPassword.length < 8) {
+    showToast('Sandi manajemen baru minimal 8 karakter.');
+    return;
+  }
+  if (newPassword !== confirmPassword) {
+    showToast('Ulangi sandi manajemen baru belum sama.');
+    return;
+  }
+
+  try {
+    await setClassManagerPassword(currentPassword, newPassword);
+    document.getElementById('classManagerCurrentPassword').value = '';
+    document.getElementById('classManagerNewPassword').value = '';
+    document.getElementById('classManagerConfirmPassword').value = '';
+    lockClassManager();
+    showToast('Sandi manajemen berhasil diganti. Popup dikunci kembali.');
+  } catch (error) {
+    console.error('Gagal mengganti sandi manajemen:', error);
+    showToast('Gagal mengganti sandi manajemen: ' + error.message);
+    document.getElementById('classManagerCurrentPassword').select();
   }
 }
 
@@ -1309,12 +1450,10 @@ function renderClassManagement() {
           <strong>${escapeHtml(cls.name)}</strong>
           <div class="class-meta-line">Wali: ${escapeHtml(cls.homeroom)} • ${memberCount} orang tua</div>
           <div class="class-meta-line">
-            ${cls.hasPassword ? '🔐 Sandi aktif' : '⚠️ Sandi belum diatur'} •
-            ${formatRp(cls.cashAmount || 0)} / ${periodTypeLabel(cls.cashPeriod)}
+            ${cls.hasPassword ? '🔐 Sandi aktif' : '⚠️ Sandi belum diatur'}
           </div>
         </div>
         <div class="item-actions">
-          <button type="button" class="glass-btn btn-outline btn-sm" onclick="selectClassAndEnter('${escapeHtml(cls.id)}')">Buka</button>
           <button type="button" class="glass-btn btn-outline btn-sm" onclick="startEditClass('${escapeHtml(cls.id)}')">Ubah</button>
           <button type="button" class="glass-btn btn-accent-yellow btn-sm" onclick="startEditClass('${escapeHtml(cls.id)}', true)">Sandi</button>
           <button type="button" class="glass-btn btn-danger btn-sm" onclick="deleteClass('${escapeHtml(cls.id)}')">Hapus</button>
@@ -1336,8 +1475,6 @@ function startEditClass(classId, focusPassword) {
   document.getElementById('editClassBankName').value = cls.bankName;
   document.getElementById('editClassBankNumber').value = cls.bankNumber;
   document.getElementById('editClassBankHolder').value = cls.bankHolder;
-  document.getElementById('editClassCashPeriod').value = cls.cashPeriod || 'bulanan';
-  setRupiahValue('editClassCashAmount', cls.cashAmount || 0);
   document.getElementById('editClassPassword').value = '';
 
   box.classList.remove('hidden');
@@ -1363,8 +1500,6 @@ async function handleCreateClass(e) {
   const bankNumber = document.getElementById('newClassBankNumber').value.trim();
   const bankHolder = document.getElementById('newClassBankHolder').value.trim();
   const password = document.getElementById('newClassPassword').value;
-  const cashPeriod = document.getElementById('newClassCashPeriod').value;
-  const cashAmount = parseRupiah(document.getElementById('newClassCashAmount').value);
 
   if (!name || !homeroom || !bankName || !bankNumber || !bankHolder) {
     showToast('Semua data kelas wajib diisi.');
@@ -1385,13 +1520,13 @@ async function handleCreateClass(e) {
       bankNumber,
       bankHolder,
       password,
-      cashPeriod,
-      cashAmount
+      cashPeriod: 'bulanan',
+      cashAmount: 0
     });
 
     e.target.reset();
     await refreshAllData();
-    renderGuruDashboard();
+    renderClassManagement();
     showToast('Kelas baru berhasil dibuat dengan saldo awal Rp 0.');
   } catch (error) {
     console.error('Gagal membuat kelas:', error);
@@ -1410,8 +1545,6 @@ async function handleSaveClassEdit(e) {
   const bankName = document.getElementById('editClassBankName').value.trim();
   const bankNumber = document.getElementById('editClassBankNumber').value.trim();
   const bankHolder = document.getElementById('editClassBankHolder').value.trim();
-  const cashPeriod = document.getElementById('editClassCashPeriod').value;
-  const cashAmount = parseRupiah(document.getElementById('editClassCashAmount').value);
   const newPassword = document.getElementById('editClassPassword').value;
 
   if (!id || !name || !homeroom) {
@@ -1424,8 +1557,8 @@ async function handleSaveClassEdit(e) {
   }
 
   try {
-    await updateClassDetails({
-      id, name, grade, homeroom, bankName, bankNumber, bankHolder, cashPeriod, cashAmount
+    await updateClassInfo({
+      id, name, grade, homeroom, bankName, bankNumber, bankHolder
     });
 
     if (newPassword) {
@@ -1434,7 +1567,7 @@ async function handleSaveClassEdit(e) {
 
     cancelEditClass();
     await refreshAllData();
-    renderGuruDashboard();
+    renderClassManagement();
     showToast('Data kelas berhasil diperbarui.');
   } catch (error) {
     console.error('Gagal mengubah kelas:', error);
@@ -1460,7 +1593,7 @@ async function deleteClass(classId) {
       state.selectedDueId = '';
     }
     await refreshAllData();
-    renderGuruDashboard();
+    renderClassManagement();
     showToast('Kelas ' + cls.name + ' berhasil dihapus.');
   } catch (error) {
     console.error('Gagal menghapus kelas:', error);
@@ -2418,6 +2551,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (event.target === overlay) {
         if (overlay.id === 'joinClassModal') closeJoinClassModal();
         if (overlay.id === 'inboxModal') closeInbox();
+        if (overlay.id === 'classManagerModal') closeClassManagerModal();
       }
     });
   });
@@ -2426,6 +2560,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (event.key !== 'Escape') return;
     closeJoinClassModal();
     closeInbox();
+    closeClassManagerModal();
   });
 
   if (!isSupabaseConfigured()) {

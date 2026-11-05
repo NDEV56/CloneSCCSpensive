@@ -2090,6 +2090,36 @@ body {
   flex-shrink: 0;
 }
 
+/* Modal Manajemen Kelas (tombol di navbar admin, di luar halaman kelas) */
+.class-manager-modal {
+  width: min(1120px, 100%);
+  max-height: 90vh;
+}
+
+.class-manager-toolbar {
+  margin-bottom: 14px;
+}
+
+.manager-password-box {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--glass-border);
+}
+
+.manager-change-submit {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 420px) {
+  .class-manager-toolbar {
+    align-items: stretch;
+  }
+
+  .class-manager-toolbar .glass-btn {
+    width: 100%;
+  }
+}
+
 @media (max-width: 760px) {
   .app-navbar {
     padding: 14px;

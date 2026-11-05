@@ -686,6 +686,19 @@ begin
     raise exception 'Sesi login tidak ditemukan';
   end if;
 
+  -- Sandi selalu diverifikasi, baik untuk membuka kelas maupun untuk bergabung pertama kali.
+  select password_hash into v_hash
+  from public.class_secrets
+  where class_id = p_class_id;
+
+  if v_hash is null then
+    raise exception 'Kelas ini belum memiliki sandi. Hubungi admin/wali kelas.';
+  end if;
+
+  if crypt(coalesce(p_password, ''), v_hash) <> v_hash then
+    raise exception 'Sandi kelas salah';
+  end if;
+
   select * into v_member
   from public.class_members
   where class_id = p_class_id and user_id = auth.uid();
@@ -703,18 +716,6 @@ begin
       'student_name', v_member.student_name,
       'parent_name', v_member.parent_name
     );
-  end if;
-
-  select password_hash into v_hash
-  from public.class_secrets
-  where class_id = p_class_id;
-
-  if v_hash is null then
-    raise exception 'Kelas ini belum memiliki sandi. Hubungi admin/wali kelas.';
-  end if;
-
-  if crypt(coalesce(p_password, ''), v_hash) <> v_hash then
-    raise exception 'Sandi kelas salah';
   end if;
 
   if length(trim(coalesce(p_student_name, ''))) < 2 then
@@ -984,6 +985,7 @@ create index if not exists transfers_due_idx on public.transfers(due_id);
 
 -- Orang tua hanya boleh membaca transfer miliknya; admin melihat semua.
 drop policy if exists "transfers_read_authenticated" on public.transfers;
+drop policy if exists "transfers_read_own_or_guru" on public.transfers;
 create policy "transfers_read_own_or_guru"
   on public.transfers for select
   to authenticated
@@ -1263,3 +1265,120 @@ begin
     end if;
   end loop;
 end $$;
+
+-- =====================================================
+-- 11. SANDI MANAJEMEN KELAS (KHUSUS MANAGER SEKOLAH)
+-- =====================================================
+-- Database menyimpan hash bcrypt sandi manajemen kelas.
+-- Sandi ini dipakai untuk membuka popup "Manajemen Kelas" dari halaman admin.
+-- Sandi awal bawaan: Manager123. WAJIB diganti setelah login pertama.
+
+create table if not exists public.class_manager_settings (
+  id boolean primary key default true check (id),
+  password_hash text not null,
+  failed_attempts integer not null default 0,
+  locked_until timestamptz,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.class_manager_settings enable row level security;
+-- Sengaja tidak ada policy. Hanya RPC di bawah yang boleh mengakses tabel ini.
+
+insert into public.class_manager_settings (id, password_hash)
+values (true, crypt('Manager123', gen_salt('bf', 10)))
+on conflict (id) do nothing;
+
+create or replace function public.verify_class_manager_password(p_password text)
+returns boolean
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_hash text;
+  v_locked_until timestamptz;
+begin
+  if public.current_user_role() is distinct from 'guru' then
+    raise exception 'Hanya manager/admin sekolah yang dapat membuka manajemen kelas';
+  end if;
+
+  select password_hash, locked_until
+  into v_hash, v_locked_until
+  from public.class_manager_settings
+  where id = true;
+
+  if v_hash is null then
+    raise exception 'Sandi manajemen belum diatur. Jalankan skema terbaru atau atur lewat SQL.';
+  end if;
+
+  if v_locked_until is not null and v_locked_until > now() then
+    raise exception 'Terlalu banyak percobaan. Coba lagi setelah %', to_char(v_locked_until, 'YYYY-MM-DD HH24:MI:SS');
+  end if;
+
+  if crypt(coalesce(p_password, ''), v_hash) = v_hash then
+    update public.class_manager_settings
+    set failed_attempts = 0,
+        locked_until = null,
+        updated_at = now()
+    where id = true;
+    return true;
+  end if;
+
+  update public.class_manager_settings
+  set
+    failed_attempts = failed_attempts + 1,
+    locked_until = case
+      when failed_attempts + 1 >= 5 then now() + interval '15 minutes'
+      else locked_until
+    end,
+    updated_at = now()
+  where id = true;
+
+  return false;
+end;
+$$;
+
+revoke all on function public.verify_class_manager_password(text) from public;
+grant execute on function public.verify_class_manager_password(text) to authenticated;
+
+create or replace function public.set_class_manager_password(p_current_password text, p_new_password text)
+returns void
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_hash text;
+begin
+  if public.current_user_role() is distinct from 'guru' then
+    raise exception 'Hanya manager/admin sekolah yang dapat mengganti sandi manajemen';
+  end if;
+
+  if length(coalesce(p_new_password, '')) < 8 then
+    raise exception 'Sandi manajemen baru minimal 8 karakter';
+  end if;
+
+  select password_hash into v_hash
+  from public.class_manager_settings
+  where id = true;
+
+  if v_hash is null then
+    raise exception 'Sandi manajemen belum diatur';
+  end if;
+
+  if crypt(coalesce(p_current_password, ''), v_hash) <> v_hash then
+    raise exception 'Sandi manajemen lama salah';
+  end if;
+
+  update public.class_manager_settings
+  set password_hash = crypt(p_new_password, gen_salt('bf', 10)),
+      failed_attempts = 0,
+      locked_until = null,
+      updated_at = now()
+  where id = true;
+end;
+$$;
+
+revoke all on function public.set_class_manager_password(text, text) from public;
+grant execute on function public.set_class_manager_password(text, text) to authenticated;
+

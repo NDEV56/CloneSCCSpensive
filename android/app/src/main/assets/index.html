@@ -329,6 +329,7 @@
           </div>
         </div>
         <div class="app-navbar-actions">
+          <button type="button" class="glass-btn btn-accent-yellow" onclick="openClassManagerModal()">🏫 Manajemen Kelas</button>
           <button type="button" class="glass-btn btn-outline" onclick="openChangePassword()">Ganti Sandi</button>
           <button type="button" class="glass-btn btn-outline" onclick="goToClassSelect()">Ganti Kelas</button>
           <button type="button" class="glass-btn btn-danger" onclick="logout()">Keluar</button>
@@ -497,162 +498,6 @@
           </section>
         </div>
       </div>
-
-      <!-- =====================================================
-           MANAJEMEN KELAS (TAMBAH / UBAH / HAPUS / SANDI)
-           ===================================================== -->
-      <section class="glass-card mt-20">
-        <div class="section-head">
-          <h3>🏫 Manajemen Kelas</h3>
-          <span class="badge badge-cyan">Tambah • Ubah • Hapus</span>
-        </div>
-        <p class="section-desc">
-          Setiap kelas wajib memiliki sandi sendiri. Orang tua harus memasukkan sandi saat pertama kali bergabung.
-          Saldo awal kelas baru selalu <strong>Rp 0</strong>.
-        </p>
-
-        <div class="management-grid">
-          <!-- Form Tambah Kelas -->
-          <form onsubmit="handleCreateClass(event)" class="form-stack management-form">
-            <h4 class="subhead">+ Tambah Kelas Baru</h4>
-            <div class="form-row-2">
-              <div class="form-group">
-                <label>Nama Kelas</label>
-                <input type="text" id="newClassName" class="glass-input" placeholder="Misal: Kelas VII-B" required />
-              </div>
-              <div class="form-group">
-                <label>Tingkat</label>
-                <select id="newClassGrade" class="glass-input">
-                  <option value="VII">VII (Tujuh)</option>
-                  <option value="VIII">VIII (Delapan)</option>
-                  <option value="IX">IX (Sembilan)</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-group">
-              <label>Nama Wali Kelas</label>
-              <input type="text" id="newClassHomeroom" class="glass-input" placeholder="Contoh: Budi Santoso, S.Pd."
-                required />
-            </div>
-            <div class="form-row-2">
-              <div class="form-group">
-                <label>Nama Bank / E-Wallet</label>
-                <input type="text" id="newClassBankName" class="glass-input" placeholder="BANK BRI" required />
-              </div>
-              <div class="form-group">
-                <label>Nomor Rekening</label>
-                <input type="text" id="newClassBankNumber" class="glass-input" placeholder="0029-01-..." required />
-              </div>
-            </div>
-            <div class="form-group">
-              <label>Atas Nama Rekening</label>
-              <input type="text" id="newClassBankHolder" class="glass-input" placeholder="Nama pemilik rekening"
-                required />
-            </div>
-            <div class="form-group">
-              <label>Sandi Kelas (Wajib)</label>
-              <input type="password" id="newClassPassword" class="glass-input" minlength="4"
-                placeholder="Minimal 4 karakter" autocomplete="new-password" required />
-              <small class="field-hint">Sandi ini yang dimasukkan orang tua saat memilih kelas.</small>
-            </div>
-            <div class="form-row-2">
-              <div class="form-group">
-                <label>Periode Kas</label>
-                <select id="newClassCashPeriod" class="glass-input">
-                  <option value="harian">Per Hari</option>
-                  <option value="mingguan">Per Minggu</option>
-                  <option value="bulanan" selected>Per Bulan</option>
-                  <option value="kuartalan">Per Kuartal</option>
-                  <option value="semesteran">Per Semester</option>
-                  <option value="tahunan">Per Tahun</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label>Nominal Kas / Periode (Rp)</label>
-                <input type="text" id="newClassCashAmount" class="glass-input" placeholder="Contoh: 25.000"
-                  inputmode="numeric" data-rupiah />
-              </div>
-            </div>
-            <button type="submit" class="glass-btn btn-primary-guru full-width">
-              + Buat Kelas (Saldo Rp 0)
-            </button>
-          </form>
-
-          <!-- Daftar & Edit Kelas -->
-          <div class="management-list">
-            <h4 class="subhead">Daftar Kelas</h4>
-            <div id="guruClassList" class="list-stack"></div>
-
-            <div id="editClassBox" class="edit-class-box hidden">
-              <div class="section-head">
-                <h4 class="subhead">✏️ Ubah Kelas</h4>
-                <button type="button" class="link-muted" onclick="cancelEditClass()">Tutup</button>
-              </div>
-              <form onsubmit="handleSaveClassEdit(event)" class="form-stack">
-                <input type="hidden" id="editClassId" />
-                <div class="form-row-2">
-                  <div class="form-group">
-                    <label>Nama Kelas</label>
-                    <input type="text" id="editClassName" class="glass-input" required />
-                  </div>
-                  <div class="form-group">
-                    <label>Tingkat</label>
-                    <select id="editClassGrade" class="glass-input">
-                      <option value="VII">VII</option>
-                      <option value="VIII">VIII</option>
-                      <option value="IX">IX</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="form-group">
-                  <label>Nama Wali Kelas</label>
-                  <input type="text" id="editClassHomeroom" class="glass-input" required />
-                </div>
-                <div class="form-row-2">
-                  <div class="form-group">
-                    <label>Nama Bank</label>
-                    <input type="text" id="editClassBankName" class="glass-input" required />
-                  </div>
-                  <div class="form-group">
-                    <label>Nomor Rekening</label>
-                    <input type="text" id="editClassBankNumber" class="glass-input" required />
-                  </div>
-                </div>
-                <div class="form-group">
-                  <label>Atas Nama</label>
-                  <input type="text" id="editClassBankHolder" class="glass-input" required />
-                </div>
-                <div class="form-row-2">
-                  <div class="form-group">
-                    <label>Periode Kas</label>
-                    <select id="editClassCashPeriod" class="glass-input">
-                      <option value="harian">Per Hari</option>
-                      <option value="mingguan">Per Minggu</option>
-                      <option value="bulanan">Per Bulan</option>
-                      <option value="kuartalan">Per Kuartal</option>
-                      <option value="semesteran">Per Semester</option>
-                      <option value="tahunan">Per Tahun</option>
-                    </select>
-                  </div>
-                  <div class="form-group">
-                    <label>Nominal Kas / Periode (Rp)</label>
-                    <input type="text" id="editClassCashAmount" class="glass-input" inputmode="numeric"
-                      data-rupiah />
-                  </div>
-                </div>
-                <div class="form-group">
-                  <label>Sandi Kelas Baru (Opsional)</label>
-                  <input type="password" id="editClassPassword" class="glass-input" minlength="4"
-                    placeholder="Kosongkan jika tidak ingin mengganti sandi" autocomplete="new-password" />
-                </div>
-                <button type="submit" class="glass-btn btn-primary-guru full-width">
-                  Simpan Perubahan Kelas
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-      </section>
 
       <!-- =====================================================
            PENGATURAN KAS KELAS (PERIODE & NOMINAL)
@@ -997,7 +842,7 @@
   </main>
 
   <!-- =========================================================
-       MODAL: SANDI KELAS (ORANG TUA SAAT PERTAMA GABUNG)
+       MODAL: SANDI KELAS (ORANG TUA SAAT MAU MEMBUKA KELAS)
        ========================================================= -->
   <div id="joinClassModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="joinClassTitle">
     <div class="modal-card glass-card">
@@ -1006,10 +851,10 @@
         <button type="button" class="modal-close" onclick="closeJoinClassModal()" aria-label="Tutup">×</button>
       </div>
       <p id="joinClassDesc" class="section-desc">
-        Masukkan sandi kelas yang diberikan wali kelas untuk bergabung.
+        Masukkan sandi kelas yang diberikan wali kelas.
       </p>
       <form onsubmit="handleJoinClass(event)" class="form-stack">
-        <div class="form-group">
+        <div class="form-group" id="joinStudentGroup">
           <label for="joinStudentName">Nama Siswa (Anak)</label>
           <input type="text" id="joinStudentName" class="glass-input" placeholder="Contoh: Raka Pratama" required />
         </div>
@@ -1022,6 +867,175 @@
           Gabung Kelas →
         </button>
       </form>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       MODAL: MANAJEMEN KELAS (DI LUAR HALAMAN KELAS)
+       ========================================================= -->
+  <div id="classManagerModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="classManagerTitle">
+    <div class="modal-card glass-card class-manager-modal">
+      <div class="modal-head">
+        <h3 id="classManagerTitle">🏫 Manajemen Kelas</h3>
+        <button type="button" class="modal-close" onclick="closeClassManagerModal()" aria-label="Tutup">×</button>
+      </div>
+
+      <div id="classManagerGate">
+        <p class="section-desc">
+          Manajemen kelas berada di luar halaman kelas dan hanya bisa dibuka oleh manager sekolah.
+          Masukkan sandi manajemen yang tersimpan di database.
+        </p>
+        <form onsubmit="handleClassManagerUnlock(event)" class="form-stack">
+          <div class="form-group">
+            <label for="classManagerPassword">Sandi Manajemen</label>
+            <input type="password" id="classManagerPassword" class="glass-input" autocomplete="off"
+              placeholder="Minimal 8 karakter" minlength="8" required />
+            <small class="field-hint">Sandi awal bawaan database: <strong>Manager123</strong>. Segera ganti setelah berhasil masuk.</small>
+          </div>
+          <button type="submit" id="classManagerUnlockBtn" class="glass-btn btn-accent-yellow full-width">
+            Buka Manajemen Kelas →
+          </button>
+        </form>
+      </div>
+
+      <div id="classManagerPanel" class="hidden">
+        <div class="section-head class-manager-toolbar">
+          <div>
+            <h4 class="subhead">Pengelolaan Kelas Sekolah</h4>
+            <p class="section-desc">Tambah, ubah, hapus kelas, wali kelas, dan sandi kelas.</p>
+          </div>
+          <button type="button" class="glass-btn btn-outline btn-sm" onclick="lockClassManager()">Kunci Popup</button>
+        </div>
+
+        <div class="management-grid">
+          <form onsubmit="handleCreateClass(event)" class="form-stack management-form">
+            <h4 class="subhead">+ Tambah Kelas Baru</h4>
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>Nama Kelas</label>
+                <input type="text" id="newClassName" class="glass-input" placeholder="Misal: Kelas VII-B" required />
+              </div>
+              <div class="form-group">
+                <label>Tingkat</label>
+                <select id="newClassGrade" class="glass-input">
+                  <option value="VII">VII (Tujuh)</option>
+                  <option value="VIII">VIII (Delapan)</option>
+                  <option value="IX">IX (Sembilan)</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Nama Wali Kelas</label>
+              <input type="text" id="newClassHomeroom" class="glass-input" placeholder="Contoh: Budi Santoso, S.Pd."
+                required />
+            </div>
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>Nama Bank / E-Wallet</label>
+                <input type="text" id="newClassBankName" class="glass-input" placeholder="BANK BRI" required />
+              </div>
+              <div class="form-group">
+                <label>Nomor Rekening</label>
+                <input type="text" id="newClassBankNumber" class="glass-input" placeholder="0029-01-..." required />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Atas Nama Rekening</label>
+              <input type="text" id="newClassBankHolder" class="glass-input" placeholder="Nama pemilik rekening"
+                required />
+            </div>
+            <div class="form-group">
+              <label>Sandi Kelas (Wajib)</label>
+              <input type="password" id="newClassPassword" class="glass-input" minlength="4"
+                placeholder="Minimal 4 karakter" autocomplete="new-password" required />
+              <small class="field-hint">Orang tua wajib memasukkan sandi ini setiap kali membuka kelas.</small>
+            </div>
+            <button type="submit" class="glass-btn btn-primary-guru full-width">
+              + Buat Kelas (Saldo Rp 0)
+            </button>
+          </form>
+
+          <div class="management-list">
+            <h4 class="subhead">Daftar Kelas</h4>
+            <div id="guruClassList" class="list-stack"></div>
+
+            <div id="editClassBox" class="edit-class-box hidden">
+              <div class="section-head">
+                <h4 class="subhead">✏️ Ubah Kelas</h4>
+                <button type="button" class="link-muted" onclick="cancelEditClass()">Tutup</button>
+              </div>
+              <form onsubmit="handleSaveClassEdit(event)" class="form-stack">
+                <input type="hidden" id="editClassId" />
+                <div class="form-row-2">
+                  <div class="form-group">
+                    <label>Nama Kelas</label>
+                    <input type="text" id="editClassName" class="glass-input" required />
+                  </div>
+                  <div class="form-group">
+                    <label>Tingkat</label>
+                    <select id="editClassGrade" class="glass-input">
+                      <option value="VII">VII</option>
+                      <option value="VIII">VIII</option>
+                      <option value="IX">IX</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Nama Wali Kelas</label>
+                  <input type="text" id="editClassHomeroom" class="glass-input" required />
+                </div>
+                <div class="form-row-2">
+                  <div class="form-group">
+                    <label>Nama Bank</label>
+                    <input type="text" id="editClassBankName" class="glass-input" required />
+                  </div>
+                  <div class="form-group">
+                    <label>Nomor Rekening</label>
+                    <input type="text" id="editClassBankNumber" class="glass-input" required />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Atas Nama</label>
+                  <input type="text" id="editClassBankHolder" class="glass-input" required />
+                </div>
+                <div class="form-group">
+                  <label>Sandi Kelas Baru (Opsional)</label>
+                  <input type="password" id="editClassPassword" class="glass-input" minlength="4"
+                    placeholder="Kosongkan jika tidak ingin mengganti sandi" autocomplete="new-password" />
+                </div>
+                <button type="submit" class="glass-btn btn-primary-guru full-width">
+                  Simpan Perubahan Kelas
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <div class="manager-password-box">
+          <h4 class="subhead">🔐 Ganti Sandi Manajemen</h4>
+          <p class="section-desc">Sandi ini tersimpan di database dan dipakai untuk membuka tombol Manajemen Kelas.</p>
+          <form onsubmit="handleClassManagerPasswordChange(event)" class="form-row-3">
+            <div class="form-group">
+              <label>Sandi Lama</label>
+              <input type="password" id="classManagerCurrentPassword" class="glass-input" minlength="8"
+                autocomplete="off" required />
+            </div>
+            <div class="form-group">
+              <label>Sandi Baru</label>
+              <input type="password" id="classManagerNewPassword" class="glass-input" minlength="8"
+                autocomplete="new-password" required />
+            </div>
+            <div class="form-group">
+              <label>Ulangi Sandi Baru</label>
+              <input type="password" id="classManagerConfirmPassword" class="glass-input" minlength="8"
+                autocomplete="new-password" required />
+            </div>
+            <button type="submit" class="glass-btn btn-primary-guru manager-change-submit">
+              Simpan Sandi Manajemen
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
   </div>
 
