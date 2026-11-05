@@ -34,18 +34,34 @@ File itu otomatis membuat:
 | Tabel | Isi |
 |---|---|
 | `profiles` | Profil user (admin/guru / orang tua) + hash kode pemulihan |
-| `classes` | Data kelas, rekening, saldo, iuran, riwayat kas |
-| `transfers` | Konfirmasi transfer dari orang tua |
+| `classes` | Data kelas, rekening, saldo, riwayat kas, periode & nominal kas |
+| `class_secrets` | Hash bcrypt sandi tiap kelas (tidak bisa dibaca langsung) |
+| `class_members` | Orang tua/siswa yang sudah bergabung ke kelas |
+| `dues` | Program iuran/tagihan per kelas |
+| `due_payments` | Checklist lunas/belum per orang tua + bukti foto |
+| `notifications` | Inbox notifikasi orang tua (read/unread) |
+| `transfers` | Konfirmasi transfer + tautan anggota/iuran + bukti foto |
 
 Sekaligus membuat:
-- Row Level Security (RLS)
-- Fungsi verifikasi transfer yang atomik
+- Row Level Security (RLS) untuk semua tabel
+- Fungsi verifikasi transfer yang atomik (sekaligus update checklist iuran)
+- Fungsi sandi kelas: `set_class_password`, `create_class_with_password`, `join_class_with_password`
+- Fungsi iuran/checklist: `create_due`, `admin_mark_due_payment`
+- Fungsi notifikasi: `notify_class_members`, `notify_unpaid_members`
 - Fungsi profil, kode pemulihan, dan reset sandi tanpa email
-- Seed 3 kelas contoh + 1 transfer contoh
-- Realtime untuk tabel `classes` dan `transfers`
+- Bucket Storage `payment-proofs` untuk foto bukti pembayaran
+- Seed 3 kelas contoh dengan **saldo awal Rp 0**
+- Realtime untuk `classes`, `transfers`, `class_members`, `dues`, `due_payments`, `notifications`
 
 > **Pendaftaran baru selalu menjadi orang tua (`ortu`).**
 > Akun admin hanya bisa dibuat lewat Dashboard Supabase (lihat bagian 4b).
+>
+> **Pembaruan fitur:** jika database sudah pernah dibuat sebelum fitur sandi kelas/iuran/inbox,
+> jalankan ulang **seluruh** `supabase-schema.sql`. Blok nomor 10 bersifat idempotent
+> (aman dijalankan berulang) dan akan menambahkan kolom/tabel/fungsi baru tanpa menghapus data.
+>
+> Setelah skema dijalankan, admin perlu membuka **Manajemen Kelas → Sandi** untuk mengatur
+> sandi pada kelas lama. Kelas tanpa sandi tidak bisa dimasuki orang tua.
 
 ---
 
@@ -176,13 +192,27 @@ Skema SQL sudah menambahkan tabel ke publikasi realtime.
 Untuk memastikan:
 
 1. Buka **Database** → **Replication** (atau **Realtime**).
-2. Pastikan tabel `classes` dan `transfers` ada di publikasi `supabase_realtime`.
+2. Pastikan tabel `classes`, `transfers`, `class_members`, `dues`, `due_payments`, dan
+   `notifications` ada di publikasi `supabase_realtime`.
 
 Realtime membuat:
 - Guru menyimpan data → halaman Orang Tua langsung update.
 - Orang tua mengirim transfer → antrean guru langsung muncul.
+- Iuran/notifikasi baru → inbox orang tua langsung bertambah.
 
 Kalau realtime belum aktif, data tetap tersimpan. Hanya UI yang tidak auto-refresh.
+
+---
+
+## 5b. Storage foto bukti pembayaran
+
+Skema SQL sudah membuat bucket **`payment-proofs`** (public) beserta policy upload untuk user login.
+Tidak perlu membuat bucket manual. Jika pernah menghapus bucket, jalankan ulang blok 10h di
+`supabase-schema.sql`, atau buat manual:
+
+1. Buka **Storage** → **New bucket** → nama `payment-proofs` → centang **Public bucket**.
+2. Tambahkan policy **INSERT** untuk role `authenticated` dengan `bucket_id = 'payment-proofs'`.
+3. Batas foto di aplikasi: hanya gambar (JPG/PNG/WebP) dan maksimal **5 MB**.
 
 ---
 
@@ -248,25 +278,31 @@ Tes orang tua:
 1. Buka web → klik **Sign Up** (teks di bawah panel login).
 2. Daftar dengan username/nomor HP/email + sandi minimal 8 karakter.
 3. Simpan **kode pemulihan** yang muncul.
-4. Pilih kelas `VIII-A`.
-5. Buka menu transfer → kirim konfirmasi transfer.
-6. Buka **Supabase Dashboard** → **Table Editor** → tabel `transfers`, pastikan datanya masuk.
+4. Pilih kelas `VIII-A` → masukkan **sandi kelas** dari wali kelas + nama siswa.
+   (Sandi hanya diminta sekali per kelas.)
+5. Buka menu transfer → pilih iuran → lampirkan **foto bukti** (wajib) → kirim.
+6. Buka **Supabase Dashboard** → **Table Editor** → tabel `transfers` dan `due_payments`,
+   pastikan datanya masuk (status `PENDING`).
+7. Buka **Inbox** → jumlah badge belum dibaca berkurang saat pesan dibuka.
 
 Tes admin:
 
-1. Logout → login memakai akun admin (`Admin` / `Admin`).
+1. Logout → login memakai akun admin (`adminscc@gmail.com` / sandi admin).
 2. Masukkan **Kunci Izin Admin** (`ADMIN_ACCESS_KEY`).
-3. Pilih kelas → ubah rekening, tambah kas, atau tambah iuran.
-4. Buka **Supabase Dashboard** → **Table Editor** → tabel `classes`.
-5. Pastikan datanya berubah.
-6. Setujui transfer orang tua di **Antrean Verifikasi** → saldo kas dan riwayat kas bertambah.
+3. Pilih kelas → tambah/ubah/hapus kelas, atur sandi, atur periode & nominal kas.
+4. Tambah program iuran → notifikasi otomatis masuk ke inbox orang tua.
+5. Buka **Checklist Pembayaran** → centang lunas/belum per orang tua.
+6. Setujui transfer orang tua di **Antrean Verifikasi** → saldo kas bertambah dan
+   checklist iuran otomatis menjadi **Lunas**.
+7. Pastikan data orang tua yang bergabung muncul di **Anggota Kelas**.
 
 Tes keamanan:
 
 1. Login admin dengan kunci izin yang salah 3 kali → sesi otomatis berakhir.
 2. Login orang tua → tidak ada permintaan kunci izin dan tidak bisa membuka dashboard admin.
-3. Buka **Lupa kata sandi** → isi username + kode pemulihan + sandi baru → login dengan sandi baru.
-4. Coba kode pemulihan salah 5 kali → reset terkunci 15 menit.
+3. Coba gabung kelas dengan sandi salah → ditolak.
+4. Buka **Lupa kata sandi** → isi username + kode pemulihan + sandi baru → login dengan sandi baru.
+5. Coba kode pemulihan salah 5 kali → reset terkunci 15 menit.
 
 ---
 
@@ -275,16 +311,24 @@ Tes keamanan:
 | Aksi di web | Tabel Supabase |
 |---|---|
 | Daftar / login | `auth.users` + `profiles` |
-| Ubah rekening | `classes` |
+| Ubah rekening / periode kas | `classes` |
 | Catat kas masuk/keluar | `classes.balance` + `classes.cash_history` |
-| Tambah iuran | `classes.bills` |
-| Kirim transfer orang tua | `transfers` |
-| Guru terima/tolak transfer | `transfers.status` + `classes.balance` + `classes.cash_history` |
+| Buat / hapus kelas | `classes` + `class_secrets` |
+| Gabung kelas dengan sandi | `class_members` |
+| Tambah program iuran | `dues` + `notifications` |
+| Kirim transfer orang tua | `transfers` + `due_payments` |
+| Upload foto bukti | Storage `payment-proofs` + `transfers.proof_url` |
+| Guru terima/tolak transfer | `transfers.status` + `classes.balance` + `classes.cash_history` + `due_payments` |
+| Checklist manual admin | `due_payments` |
+| Kirim notifikasi / pengingat | `notifications` |
+| Orang tua membaca inbox | `notifications.is_read` |
 
 Semua operasi tulis memakai Supabase JS client dan dibatasi RLS:
-- **Guru** boleh mengubah data kelas.
-- **Orang tua** hanya boleh mengirim transfer baru (status `PENDING`).
-- Verifikasi transfer hanya boleh dilakukan guru.
+- **Guru** boleh mengelola kelas, iuran, checklist, dan notifikasi.
+- **Orang tua** hanya boleh melihat data kelasnya, mengirim transfer baru (status `PENDING`),
+  dan menandai notifikasinya sendiri sebagai dibaca.
+- Verifikasi transfer, perubahan saldo, dan checklist hanya boleh dilakukan guru lewat RPC.
+- Sandi kelas tidak pernah dikirim ke browser; hanya hash bcrypt di `class_secrets`.
 
 ---
 
@@ -323,8 +367,12 @@ Pastikan HP/emulator punya koneksi internet.
 | Lupa sandi tapi tidak punya kode pemulihan | Reset lewat **Authentication → Users → Reset password** di Dashboard Supabase. |
 | `Terlalu banyak percobaan. Coba lagi 15 menit lagi.` | Tunggu 15 menit, atau reset kode pemulihan lewat Dashboard Supabase. |
 | `relation "public.classes" does not exist` | Belum menjalankan `supabase-schema.sql`. |
-| `new row violates row-level security policy` | Role user bukan guru, atau profil belum dibuat. Cek tabel `profiles`. |
-| Data tidak muncul di web lain | Cek Realtime sudah aktif untuk `classes` dan `transfers`. |
+| `relation "public.class_members" does not exist` (atau `dues`/`due_payments`/`notifications`) | Database lama belum diperbarui. Jalankan ulang **seluruh** `supabase-schema.sql` (blok 10). |
+| Kelas tidak bisa dimasuki orang tua | Admin belum mengatur sandi kelas. Buka **Manajemen Kelas → Sandi**, isi minimal 4 karakter. |
+| `Sandi kelas salah` | Sandi berbeda dengan yang diatur admin. Minta wali kelas mengatur ulang sandi. |
+| Upload bukti gagal / `Bucket not found` | Jalankan blok storage di `supabase-schema.sql`, atau buat bucket public `payment-proofs`. |
+| `new row violates row-level security policy` | Role user bukan guru, profil belum dibuat, atau orang tua belum bergabung ke kelas. Cek `profiles` dan `class_members`. |
+| Data tidak muncul di web lain | Cek Realtime sudah aktif untuk `classes`, `transfers`, `class_members`, `dues`, `due_payments`, `notifications`. |
 | Gagal `get_my_profile` / `ensure_my_profile` | Jalankan ulang `supabase-schema.sql` (bagian fungsi). |
 
 ---
@@ -334,6 +382,10 @@ Pastikan HP/emulator punya koneksi internet.
 - Kredensial disimpan di `.env` (lokal) dan **Environment Variables Vercel** (produksi). File `.env` dan hasil generate `supabase-config.js` sudah masuk `.gitignore`.
 - `supabase-config.js` hanya berisi **anon public key** dan **ciphertext** kunci izin admin (AES-256-GCM + PBKDF2-SHA256). Tidak ada kunci admin plaintext di file yang dikirim ke browser.
 - Kunci izin admin adalah lapisan UI tambahan. Batas keamanan data yang sebenarnya tetap **RLS Supabase**.
+- Sandi kelas disimpan sebagai hash **bcrypt** di `class_secrets`; tabel itu tidak punya policy baca,
+  sehingga browser tidak bisa membaca hash-nya. Verifikasi hanya lewat RPC `join_class_with_password`.
+- Foto bukti disimpan di bucket `payment-proofs`. Bucket bersifat public agar admin mudah membuka bukti,
+  tetapi nama file memakai UUID user + timestamp acak. Jangan mengunggah dokumen sensitif lain ke bucket ini.
 - Admin wajib melewati 2 langkah: sandi akun + kunci izin. Salah 3 kali → sesi diakhiri.
 - Pendaftaran publik selalu membuat akun `ortu`; role admin hanya lewat SQL/Dashboard Supabase.
 - Kode pemulihan disimpan sebagai hash bcrypt di database. Reset sandi dibatasi 5 percobaan / 15 menit.

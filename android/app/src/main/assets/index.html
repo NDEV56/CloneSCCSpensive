@@ -317,24 +317,31 @@
        ========================================================= -->
   <main id="viewGuru" class="view-section">
     <div class="container">
-      <!-- Top Bar Guru -->
-      <header class="glass-card topbar">
-        <div class="topbar-brand">
+      <!-- Navbar Utama -->
+      <header class="glass-card app-navbar">
+        <div class="app-navbar-brand">
           <div class="topbar-logo-badge">
             <img src="assets/logo.png" alt="Logo SMP Masyithoh Kroya" />
           </div>
-          <div class="topbar-info">
-            <span class="badge badge-indigo">ADMIN / WALI KELAS • SMP MASYITHOH KROYA</span>
-            <h2 id="guruClassTitle">Kelas VIII-A</h2>
-            <p id="guruTeacherLabel">Wali Kelas: —</p>
+          <div class="app-navbar-title">
+            <strong>SMP Masyithoh Kroya</strong>
+            <small>Sistem Kas Kelas &amp; Tabungan Siswa</small>
           </div>
         </div>
-        <div class="topbar-actions">
+        <div class="app-navbar-actions">
           <button type="button" class="glass-btn btn-outline" onclick="openChangePassword()">Ganti Sandi</button>
           <button type="button" class="glass-btn btn-outline" onclick="goToClassSelect()">Ganti Kelas</button>
           <button type="button" class="glass-btn btn-danger" onclick="logout()">Keluar</button>
         </div>
       </header>
+
+      <!-- Identitas Kelas -->
+      <section class="glass-card class-hero">
+        <span class="badge badge-indigo">ADMIN / WALI KELAS • SMP MASYITHOH KROYA</span>
+        <h2 id="guruClassTitle">Kelas VIII-A</h2>
+        <p id="guruTeacherLabel">Wali Kelas: —</p>
+        <p id="guruCashPeriodInfo" class="class-hero-sub">Iuran kas: —</p>
+      </section>
 
       <!-- Statistik Ringkas -->
       <section class="stats-grid">
@@ -411,8 +418,8 @@
                 </div>
                 <div class="form-group">
                   <label>Nominal (Rp)</label>
-                  <input type="number" id="cashAmount" class="glass-input" placeholder="Contoh: 50000" min="1000"
-                    required />
+                  <input type="text" id="cashAmount" class="glass-input" placeholder="Contoh: 50.000"
+                    inputmode="numeric" data-rupiah required />
                 </div>
               </div>
               <div class="form-group">
@@ -428,14 +435,57 @@
           <section class="glass-card">
             <div class="section-head">
               <h3>📌 Tambah Program Iuran / Tagihan Kelas</h3>
+              <span class="badge badge-cyan">Otomatis ke Inbox</span>
             </div>
-            <form onsubmit="handleAddBill(event)" class="form-row-2">
-              <input type="text" id="billTitleInput" class="glass-input" placeholder="Nama Iuran (Misal: Kas Bulan Mei)"
-                required />
-              <input type="number" id="billNominalInput" class="glass-input" placeholder="Nominal (Rp)" min="1000"
-                required />
-              <button type="submit" class="glass-btn btn-outline full-span">+ Tambah Program Iuran</button>
+            <form onsubmit="handleAddDue(event)" class="form-stack">
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label>Nama Iuran</label>
+                  <input type="text" id="dueTitleInput" class="glass-input"
+                    placeholder="Misal: Kas Bulan November" required />
+                </div>
+                <div class="form-group">
+                  <label>Nominal (Rp)</label>
+                  <input type="text" id="dueAmountInput" class="glass-input" placeholder="Contoh: 25.000"
+                    inputmode="numeric" data-rupiah required />
+                </div>
+              </div>
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label>Jenis Periode</label>
+                  <select id="duePeriodType" class="glass-input">
+                    <option value="sekali">Sekali Bayar</option>
+                    <option value="harian">Per Hari</option>
+                    <option value="mingguan">Per Minggu</option>
+                    <option value="bulanan" selected>Per Bulan</option>
+                    <option value="kuartalan">Per Kuartal (3 Bulan)</option>
+                    <option value="semesteran">Per Semester (6 Bulan)</option>
+                    <option value="tahunan">Per Tahun</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Label Periode</label>
+                  <input type="text" id="duePeriodLabel" class="glass-input"
+                    placeholder="Contoh: November 2026" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Jatuh Tempo (Opsional)</label>
+                <input type="date" id="dueDateInput" class="glass-input" />
+              </div>
+              <button type="submit" class="glass-btn btn-accent-yellow full-width">
+                + Tambah Program Iuran
+              </button>
             </form>
+          </section>
+
+          <!-- Riwayat Program Iuran -->
+          <section class="glass-card">
+            <div class="section-head">
+              <h3>🗂️ Riwayat Program Iuran</h3>
+              <span class="badge badge-cyan">Bisa Dihapus</span>
+            </div>
+            <div id="guruDueHistory" class="list-stack"></div>
           </section>
 
           <!-- Buku Kas Kelas -->
@@ -447,6 +497,272 @@
           </section>
         </div>
       </div>
+
+      <!-- =====================================================
+           MANAJEMEN KELAS (TAMBAH / UBAH / HAPUS / SANDI)
+           ===================================================== -->
+      <section class="glass-card mt-20">
+        <div class="section-head">
+          <h3>🏫 Manajemen Kelas</h3>
+          <span class="badge badge-cyan">Tambah • Ubah • Hapus</span>
+        </div>
+        <p class="section-desc">
+          Setiap kelas wajib memiliki sandi sendiri. Orang tua harus memasukkan sandi saat pertama kali bergabung.
+          Saldo awal kelas baru selalu <strong>Rp 0</strong>.
+        </p>
+
+        <div class="management-grid">
+          <!-- Form Tambah Kelas -->
+          <form onsubmit="handleCreateClass(event)" class="form-stack management-form">
+            <h4 class="subhead">+ Tambah Kelas Baru</h4>
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>Nama Kelas</label>
+                <input type="text" id="newClassName" class="glass-input" placeholder="Misal: Kelas VII-B" required />
+              </div>
+              <div class="form-group">
+                <label>Tingkat</label>
+                <select id="newClassGrade" class="glass-input">
+                  <option value="VII">VII (Tujuh)</option>
+                  <option value="VIII">VIII (Delapan)</option>
+                  <option value="IX">IX (Sembilan)</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Nama Wali Kelas</label>
+              <input type="text" id="newClassHomeroom" class="glass-input" placeholder="Contoh: Budi Santoso, S.Pd."
+                required />
+            </div>
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>Nama Bank / E-Wallet</label>
+                <input type="text" id="newClassBankName" class="glass-input" placeholder="BANK BRI" required />
+              </div>
+              <div class="form-group">
+                <label>Nomor Rekening</label>
+                <input type="text" id="newClassBankNumber" class="glass-input" placeholder="0029-01-..." required />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Atas Nama Rekening</label>
+              <input type="text" id="newClassBankHolder" class="glass-input" placeholder="Nama pemilik rekening"
+                required />
+            </div>
+            <div class="form-group">
+              <label>Sandi Kelas (Wajib)</label>
+              <input type="password" id="newClassPassword" class="glass-input" minlength="4"
+                placeholder="Minimal 4 karakter" autocomplete="new-password" required />
+              <small class="field-hint">Sandi ini yang dimasukkan orang tua saat memilih kelas.</small>
+            </div>
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>Periode Kas</label>
+                <select id="newClassCashPeriod" class="glass-input">
+                  <option value="harian">Per Hari</option>
+                  <option value="mingguan">Per Minggu</option>
+                  <option value="bulanan" selected>Per Bulan</option>
+                  <option value="kuartalan">Per Kuartal</option>
+                  <option value="semesteran">Per Semester</option>
+                  <option value="tahunan">Per Tahun</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Nominal Kas / Periode (Rp)</label>
+                <input type="text" id="newClassCashAmount" class="glass-input" placeholder="Contoh: 25.000"
+                  inputmode="numeric" data-rupiah />
+              </div>
+            </div>
+            <button type="submit" class="glass-btn btn-primary-guru full-width">
+              + Buat Kelas (Saldo Rp 0)
+            </button>
+          </form>
+
+          <!-- Daftar & Edit Kelas -->
+          <div class="management-list">
+            <h4 class="subhead">Daftar Kelas</h4>
+            <div id="guruClassList" class="list-stack"></div>
+
+            <div id="editClassBox" class="edit-class-box hidden">
+              <div class="section-head">
+                <h4 class="subhead">✏️ Ubah Kelas</h4>
+                <button type="button" class="link-muted" onclick="cancelEditClass()">Tutup</button>
+              </div>
+              <form onsubmit="handleSaveClassEdit(event)" class="form-stack">
+                <input type="hidden" id="editClassId" />
+                <div class="form-row-2">
+                  <div class="form-group">
+                    <label>Nama Kelas</label>
+                    <input type="text" id="editClassName" class="glass-input" required />
+                  </div>
+                  <div class="form-group">
+                    <label>Tingkat</label>
+                    <select id="editClassGrade" class="glass-input">
+                      <option value="VII">VII</option>
+                      <option value="VIII">VIII</option>
+                      <option value="IX">IX</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Nama Wali Kelas</label>
+                  <input type="text" id="editClassHomeroom" class="glass-input" required />
+                </div>
+                <div class="form-row-2">
+                  <div class="form-group">
+                    <label>Nama Bank</label>
+                    <input type="text" id="editClassBankName" class="glass-input" required />
+                  </div>
+                  <div class="form-group">
+                    <label>Nomor Rekening</label>
+                    <input type="text" id="editClassBankNumber" class="glass-input" required />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Atas Nama</label>
+                  <input type="text" id="editClassBankHolder" class="glass-input" required />
+                </div>
+                <div class="form-row-2">
+                  <div class="form-group">
+                    <label>Periode Kas</label>
+                    <select id="editClassCashPeriod" class="glass-input">
+                      <option value="harian">Per Hari</option>
+                      <option value="mingguan">Per Minggu</option>
+                      <option value="bulanan">Per Bulan</option>
+                      <option value="kuartalan">Per Kuartal</option>
+                      <option value="semesteran">Per Semester</option>
+                      <option value="tahunan">Per Tahun</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Nominal Kas / Periode (Rp)</label>
+                    <input type="text" id="editClassCashAmount" class="glass-input" inputmode="numeric"
+                      data-rupiah />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Sandi Kelas Baru (Opsional)</label>
+                  <input type="password" id="editClassPassword" class="glass-input" minlength="4"
+                    placeholder="Kosongkan jika tidak ingin mengganti sandi" autocomplete="new-password" />
+                </div>
+                <button type="submit" class="glass-btn btn-primary-guru full-width">
+                  Simpan Perubahan Kelas
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =====================================================
+           PENGATURAN KAS KELAS (PERIODE & NOMINAL)
+           ===================================================== -->
+      <section class="glass-card mt-20">
+        <div class="section-head">
+          <h3>⚙️ Pengaturan Kas Kelas</h3>
+          <span id="guruCashPeriodBadge" class="badge badge-amber">—</span>
+        </div>
+        <p class="section-desc">Atur periode penagihan kas dan nominal yang harus dibayar per periode.</p>
+        <form onsubmit="handleSaveCashSetting(event)" class="form-row-3">
+          <div class="form-group">
+            <label>Periode Kas</label>
+            <select id="cashPeriodSelect" class="glass-input">
+              <option value="harian">Per Hari</option>
+              <option value="mingguan">Per Minggu</option>
+              <option value="bulanan">Per Bulan</option>
+              <option value="kuartalan">Per Kuartal</option>
+              <option value="semesteran">Per Semester</option>
+              <option value="tahunan">Per Tahun</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Nominal per Periode (Rp)</label>
+            <input type="text" id="cashPeriodAmount" class="glass-input" placeholder="Contoh: 25.000"
+              inputmode="numeric" data-rupiah />
+          </div>
+          <button type="submit" class="glass-btn btn-primary-guru">Simpan Pengaturan Kas</button>
+        </form>
+        <p id="guruCashSettingInfo" class="readonly-note"></p>
+      </section>
+
+      <!-- =====================================================
+           CHECKLIST PEMBAYARAN PER ORANG TUA
+           ===================================================== -->
+      <section class="glass-card mt-20">
+        <div class="section-head">
+          <h3>✅ Checklist Pembayaran per Orang Tua</h3>
+          <span class="badge badge-amber">Lunas / Belum</span>
+        </div>
+        <p class="section-desc">
+          Pilih program iuran, lalu centang siapa saja yang sudah bayar. Data dari bukti transfer yang disetujui
+          otomatis berubah menjadi lunas.
+        </p>
+        <div class="checklist-toolbar">
+          <select id="checklistDueSelect" class="glass-input" onchange="renderChecklist()"></select>
+          <button type="button" class="glass-btn btn-accent-yellow btn-sm" onclick="sendUnpaidReminder()">
+            🔔 Kirim Pengingat ke yang Belum Bayar
+          </button>
+        </div>
+        <div id="guruChecklistContainer" class="table-wrap"></div>
+      </section>
+
+      <!-- =====================================================
+           DAFTAR ANGGOTA KELAS (ORANG TUA YANG SUDAH GABUNG)
+           ===================================================== -->
+      <section class="glass-card mt-20">
+        <div class="section-head">
+          <h3>👨‍👩‍👧 Anggota Kelas</h3>
+          <span id="guruMemberCountBadge" class="badge badge-cyan">0 Orang Tua</span>
+        </div>
+        <p class="section-desc">
+          Data orang tua dan siswa yang berhasil bergabung dengan sandi kelas akan muncul di sini.
+        </p>
+        <div id="guruMemberList" class="list-stack"></div>
+      </section>
+
+      <!-- =====================================================
+           KIRIM NOTIFIKASI / INBOX
+           ===================================================== -->
+      <section class="glass-card mt-20">
+        <div class="section-head">
+          <h3>📢 Kirim Notifikasi / Inbox</h3>
+          <span class="badge badge-cyan">Manual / Otomatis</span>
+        </div>
+        <p class="section-desc">
+          Notifikasi otomatis terkirim saat program iuran baru dibuat. Gunakan form ini untuk pengumuman manual
+          atau pengingat khusus yang belum membayar.
+        </p>
+        <form onsubmit="handleSendNotification(event)" class="form-stack">
+          <div class="form-row-2">
+            <div class="form-group">
+              <label>Judul Notifikasi</label>
+              <input type="text" id="notifTitleInput" class="glass-input"
+                placeholder="Contoh: Pengingat Kas November" required />
+            </div>
+            <div class="form-group">
+              <label>Kirim Ke</label>
+              <select id="notifAudience" class="glass-input" onchange="syncNotifAudience()">
+                <option value="all">Semua anggota kelas</option>
+                <option value="unpaid">Hanya yang belum bayar</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group hidden" id="notifDueGroup">
+            <label>Pilih Iuran</label>
+            <select id="notifDueSelect" class="glass-input"></select>
+          </div>
+          <div class="form-group">
+            <label>Pesan</label>
+            <textarea id="notifBodyInput" class="glass-input" rows="3"
+              placeholder="Tulis pesan singkat untuk orang tua..." required></textarea>
+          </div>
+          <button type="submit" class="glass-btn btn-primary-guru">
+            Kirim ke Inbox Orang Tua
+          </button>
+        </form>
+      </section>
+
+      <footer class="app-footer">SccSpensive</footer>
     </div>
   </main>
 
@@ -455,24 +771,35 @@
        ========================================================= -->
   <main id="viewOrtu" class="view-section">
     <div class="container pb-bottom-nav">
-      <!-- Top Bar Orang Tua -->
-      <header class="glass-card topbar">
-        <div class="topbar-brand">
+      <!-- Navbar Utama -->
+      <header class="glass-card app-navbar">
+        <div class="app-navbar-brand">
           <div class="topbar-logo-badge">
             <img src="assets/logo.png" alt="Logo SMP Masyithoh Kroya" />
           </div>
-          <div class="topbar-info">
-            <span class="badge badge-emerald">ORANG TUA / WALI MURID • SMP MASYITHOH KROYA</span>
-            <h2 id="ortuClassTitle">Kelas VIII-A</h2>
-            <p id="ortuStudentLabel">Orang Tua / Wali Murid</p>
+          <div class="app-navbar-title">
+            <strong>SMP Masyithoh Kroya</strong>
+            <small>Sistem Kas Kelas &amp; Tabungan Siswa</small>
           </div>
         </div>
-        <div class="topbar-actions">
+        <div class="app-navbar-actions">
+          <button type="button" id="ortuInboxBtn" class="glass-btn btn-outline inbox-btn" onclick="openInbox()">
+            📬 Inbox
+            <span id="ortuInboxBadge" class="inbox-badge hidden">0</span>
+          </button>
           <button type="button" class="glass-btn btn-outline" onclick="openChangePassword()">Ganti Sandi</button>
           <button type="button" class="glass-btn btn-outline" onclick="goToClassSelect()">Ganti Kelas</button>
           <button type="button" class="glass-btn btn-danger" onclick="logout()">Keluar</button>
         </div>
       </header>
+
+      <!-- Identitas Kelas -->
+      <section class="glass-card class-hero">
+        <span class="badge badge-emerald">ORANG TUA / WALI MURID • SMP MASYITHOH KROYA</span>
+        <h2 id="ortuClassTitle">Kelas VIII-A</h2>
+        <p id="ortuStudentLabel">Orang Tua / Wali Murid</p>
+        <p id="ortuCashPeriodInfo" class="class-hero-sub">Iuran kas: —</p>
+      </section>
 
       <!-- SUB-PAGE 1: BERANDA DASHBOARD ORANG TUA (READ-ONLY) -->
       <div id="ortuPageDashboard" class="ortu-subpage active">
@@ -579,8 +906,8 @@
 
               <div class="form-group">
                 <label>Nominal Transfer (Rp)</label>
-                <input type="number" id="tfAmount" class="glass-input" placeholder="Masukkan nominal transfer"
-                  min="5000" required />
+                <input type="text" id="tfAmount" class="glass-input" placeholder="Masukkan nominal transfer"
+                  inputmode="numeric" data-rupiah required />
                 <div class="quick-nominal-row">
                   <button type="button" class="chip-nominal" onclick="setQuickAmount(20000)">Rp 20.000</button>
                   <button type="button" class="chip-nominal" onclick="setQuickAmount(50000)">Rp 50.000</button>
@@ -601,10 +928,30 @@
                   </select>
                 </div>
                 <div class="form-group">
-                  <label>Referensi / Bukti Transfer</label>
-                  <input type="text" id="tfNote" class="glass-input" placeholder="Contoh: Lunas Kas & Tabungan Raka"
+                  <label>Referensi / Catatan</label>
+                  <input type="text" id="tfNote" class="glass-input" placeholder="Contoh: Lunas Kas November"
                     required />
                 </div>
+              </div>
+
+              <!-- Bukti pembayaran wajib foto -->
+              <div class="form-group">
+                <label>Bukti Pembayaran (Wajib Foto)</label>
+                <input type="hidden" id="tfDueId" value="" />
+                <div id="proofDropzone" class="proof-dropzone" onclick="pickProofFile(event)">
+                  <input type="file" id="tfProof" accept="image/*" class="hidden"
+                    onchange="handleProofSelected(event)" />
+                  <div id="proofEmpty">
+                    <span class="proof-icon">📷</span>
+                    <strong>Tarik &amp; lepas foto di sini</strong>
+                    <small>atau klik untuk memilih dari file / galeri. Format JPG/PNG, maksimal 5 MB.</small>
+                  </div>
+                  <div id="proofPreviewWrap" class="hidden">
+                    <img id="proofPreview" alt="Pratinjau bukti pembayaran" />
+                    <small id="proofFileName"></small>
+                  </div>
+                </div>
+                <small class="field-hint">Foto struk / bukti transfer wajib dilampirkan agar wali kelas bisa memverifikasi.</small>
               </div>
 
               <button type="submit" class="glass-btn btn-primary-ortu full-width">
@@ -625,6 +972,8 @@
           <div id="ortuTransferHistoryList" class="list-stack"></div>
         </div>
       </div>
+
+      <footer class="app-footer">SccSpensive</footer>
     </div>
 
     <!-- FLOATING GLASS BOTTOM NAVIGATION DENGAN TOMBOL (+) DI TENGAH -->
@@ -646,6 +995,52 @@
       </button>
     </nav>
   </main>
+
+  <!-- =========================================================
+       MODAL: SANDI KELAS (ORANG TUA SAAT PERTAMA GABUNG)
+       ========================================================= -->
+  <div id="joinClassModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="joinClassTitle">
+    <div class="modal-card glass-card">
+      <div class="modal-head">
+        <h3 id="joinClassTitle">🔐 Masuk Kelas</h3>
+        <button type="button" class="modal-close" onclick="closeJoinClassModal()" aria-label="Tutup">×</button>
+      </div>
+      <p id="joinClassDesc" class="section-desc">
+        Masukkan sandi kelas yang diberikan wali kelas untuk bergabung.
+      </p>
+      <form onsubmit="handleJoinClass(event)" class="form-stack">
+        <div class="form-group">
+          <label for="joinStudentName">Nama Siswa (Anak)</label>
+          <input type="text" id="joinStudentName" class="glass-input" placeholder="Contoh: Raka Pratama" required />
+        </div>
+        <div class="form-group">
+          <label for="joinClassPassword">Sandi Kelas</label>
+          <input type="password" id="joinClassPassword" class="glass-input" autocomplete="off"
+            placeholder="Masukkan sandi dari wali kelas" required />
+        </div>
+        <button type="submit" id="joinClassSubmit" class="glass-btn btn-primary-ortu full-width">
+          Gabung Kelas →
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       MODAL: INBOX NOTIFIKASI ORANG TUA
+       ========================================================= -->
+  <div id="inboxModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="inboxTitle">
+    <div class="modal-card glass-card inbox-modal">
+      <div class="modal-head">
+        <h3 id="inboxTitle">📬 Inbox Notifikasi</h3>
+        <button type="button" class="modal-close" onclick="closeInbox()" aria-label="Tutup">×</button>
+      </div>
+      <div class="inbox-toolbar">
+        <span id="inboxSummary">0 pesan</span>
+        <button type="button" class="link-accent" onclick="markAllInboxRead()">Tandai semua dibaca</button>
+      </div>
+      <div id="inboxList" class="list-stack"></div>
+    </div>
+  </div>
 
   <!-- Supabase SDK via CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

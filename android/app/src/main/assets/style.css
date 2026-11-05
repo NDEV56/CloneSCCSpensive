@@ -1606,3 +1606,542 @@ body {
     grid-template-columns: 1fr;
   }
 }
+/* =========================================================
+   TAMBAHAN FITUR: PASSWORD EYE, NAVBAR, KELAS, FOOTER,
+   MANAJEMEN, CHECKLIST, BUKTI FOTO, MODAL & INBOX
+   ========================================================= */
+
+/* Tombol mata di dalam input kata sandi */
+.password-field {
+  position: relative;
+  width: 100%;
+}
+
+.password-field > .glass-input {
+  padding-right: 50px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 7px;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.password-toggle:hover,
+.password-toggle:focus-visible {
+  color: var(--accent-lime);
+  background: rgba(116, 242, 27, 0.12);
+  outline: none;
+}
+
+.password-toggle svg {
+  pointer-events: none;
+}
+
+.password-toggle .icon-eye-off {
+  display: none;
+}
+
+.password-toggle.is-visible .icon-eye {
+  display: none;
+}
+
+.password-toggle.is-visible .icon-eye-off {
+  display: block;
+}
+
+/* Navbar panel admin & orang tua */
+.app-navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 16px;
+  padding: 14px 20px;
+}
+
+.app-navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.app-navbar-title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.app-navbar-title strong {
+  font-size: 1.08rem;
+  color: var(--c-white);
+  line-height: 1.25;
+}
+
+.app-navbar-title small {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.app-navbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.app-navbar-actions .glass-btn {
+  padding: 9px 13px;
+  font-size: 0.8rem;
+}
+
+/* Hero identitas kelas */
+.class-hero {
+  background: linear-gradient(135deg, rgba(5, 89, 2, 0.72), rgba(4, 28, 6, 0.9));
+  border: 1px solid rgba(116, 242, 27, 0.35);
+  margin-bottom: 18px;
+}
+
+.class-hero h2 {
+  margin: 8px 0 2px;
+  font-size: 1.6rem;
+  color: var(--c-white);
+}
+
+.class-hero p {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.class-hero .class-hero-sub {
+  margin-top: 5px;
+  color: var(--accent-yellow);
+  font-weight: 600;
+}
+
+.class-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+/* Footer SccSpensive */
+.app-footer {
+  margin-top: 34px;
+  padding: 18px 0 10px;
+  border-top: 1px solid var(--glass-border);
+  text-align: center;
+  color: var(--text-subtle);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+}
+
+/* Manajemen kelas */
+.management-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.management-form,
+.management-list {
+  min-width: 0;
+}
+
+.subhead {
+  font-size: 1rem;
+  color: var(--c-white);
+  margin-bottom: 10px;
+}
+
+.edit-class-box {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px dashed var(--glass-border);
+  border-radius: 14px;
+  background: rgba(4, 25, 6, 0.5);
+}
+
+.class-manage-item.is-active {
+  border-color: var(--accent-lime);
+  box-shadow: 0 0 18px rgba(116, 242, 27, 0.18);
+}
+
+.class-meta-line {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+.form-row-3 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.mt-8 {
+  margin-top: 8px;
+}
+
+/* Checklist pembayaran */
+.checklist-toolbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.checklist-toolbar .glass-input {
+  max-width: 420px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border-radius: 14px;
+  border: 1px solid var(--glass-border);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 660px;
+  font-size: 0.82rem;
+}
+
+.data-table th {
+  background: rgba(5, 89, 2, 0.68);
+  color: var(--accent-lime);
+  text-align: left;
+  padding: 11px 12px;
+  font-size: 0.76rem;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 11px 12px;
+  border-top: 1px solid rgba(116, 242, 27, 0.14);
+  vertical-align: middle;
+  color: var(--text-main);
+}
+
+.data-table tbody tr:hover {
+  background: rgba(116, 242, 27, 0.06);
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.status-paid {
+  background: rgba(120, 217, 16, 0.2);
+  color: #bbf799;
+  border: 1px solid rgba(120, 217, 16, 0.4);
+}
+
+.status-pending {
+  background: rgba(242, 228, 29, 0.18);
+  color: #F2E41D;
+  border: 1px solid rgba(242, 228, 29, 0.4);
+}
+
+.status-unpaid {
+  background: rgba(239, 68, 68, 0.18);
+  color: #fecaca;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+/* Unggah bukti foto */
+.proof-dropzone {
+  position: relative;
+  border: 2px dashed rgba(116, 242, 27, 0.4);
+  border-radius: 16px;
+  padding: 22px 16px;
+  text-align: center;
+  cursor: pointer;
+  background: rgba(4, 25, 6, 0.55);
+  transition: 0.2s;
+}
+
+.proof-dropzone:hover,
+.proof-dropzone.is-dragover {
+  border-color: var(--accent-lime);
+  background: rgba(116, 242, 27, 0.1);
+}
+
+.proof-dropzone.has-file {
+  border-style: solid;
+}
+
+.proof-icon {
+  display: block;
+  font-size: 1.8rem;
+  margin-bottom: 6px;
+}
+
+.proof-dropzone strong {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--c-white);
+}
+
+.proof-dropzone small {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.proof-dropzone img {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 12px;
+  object-fit: contain;
+}
+
+.proof-link-row {
+  margin-top: 6px;
+}
+
+.proof-thumb-link {
+  display: inline-block;
+  margin-top: 4px;
+}
+
+.proof-thumb {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+}
+
+/* Modal umum */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(2, 12, 2, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+.modal-card {
+  width: min(520px, 100%);
+  max-height: 88vh;
+  overflow: auto;
+  padding: 22px;
+}
+
+.modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.modal-head h3 {
+  font-size: 1.15rem;
+  color: var(--c-white);
+}
+
+.modal-close {
+  background: rgba(242, 242, 242, 0.1);
+  border: 1px solid var(--glass-border);
+  color: var(--text-main);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.modal-close:hover {
+  border-color: var(--danger);
+  color: #fecaca;
+}
+
+/* Inbox orang tua */
+.inbox-btn {
+  position: relative;
+}
+
+.inbox-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--accent-yellow);
+  color: #042402;
+  font-size: 0.68rem;
+  font-weight: 800;
+  margin-left: 4px;
+}
+
+.inbox-badge.hidden {
+  display: none !important;
+}
+
+.inbox-modal {
+  width: min(560px, 100%);
+}
+
+.inbox-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.inbox-item {
+  width: 100%;
+  text-align: left;
+  background: rgba(242, 242, 242, 0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  color: var(--text-main);
+  cursor: pointer;
+  display: block;
+  font-family: inherit;
+  transition: 0.2s;
+}
+
+.inbox-item:hover {
+  background: rgba(116, 242, 27, 0.08);
+  border-color: rgba(116, 242, 27, 0.45);
+}
+
+.inbox-item.unread {
+  background: rgba(242, 228, 29, 0.1);
+  border-color: rgba(242, 228, 29, 0.4);
+}
+
+.inbox-item-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.inbox-item-head strong {
+  font-size: 0.86rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.inbox-item-head small {
+  color: var(--text-subtle);
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+.inbox-item p {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin: 6px 0 8px;
+  line-height: 1.5;
+}
+
+.unread-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-yellow);
+  box-shadow: 0 0 8px var(--accent-yellow);
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+@media (max-width: 760px) {
+  .app-navbar {
+    padding: 14px;
+  }
+
+  .app-navbar-actions {
+    width: 100%;
+  }
+
+  .app-navbar-actions .glass-btn {
+    flex: 1 1 auto;
+  }
+
+  .management-grid,
+  .form-row-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .checklist-toolbar .glass-input {
+    max-width: none;
+    width: 100%;
+  }
+
+  .class-hero h2 {
+    font-size: 1.35rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .app-navbar-brand {
+    gap: 10px;
+  }
+
+  .app-navbar .topbar-logo-badge {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+  }
+
+  .app-navbar-title strong {
+    font-size: 0.98rem;
+  }
+
+  .app-navbar-title small {
+    font-size: 0.66rem;
+  }
+
+  .modal-card {
+    padding: 16px;
+  }
+
+  .data-table {
+    min-width: 560px;
+  }
+}

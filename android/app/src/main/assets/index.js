@@ -11,15 +11,12 @@ const DEFAULT_CLASSES = [
     bankName: 'BANK BRI',
     bankNumber: '0029-01-011223-50-1',
     bankHolder: 'Siti Aminah (Wali Kelas VII-A)',
-    balance: 1450000,
-    bills: [
-      { id: 'b1', title: 'Kas Kelas Bulanan', amount: 25000 },
-      { id: 'b2', title: 'Tabungan Outing Class & Ziarah', amount: 100000 }
-    ],
-    cashHistory: [
-      { id: 'c1', type: 'IN', desc: 'Saldo Awal Semester Ganjil', amount: 1500000, date: '01 Okt 2026' },
-      { id: 'c2', type: 'OUT', desc: 'Pembelian Alat Kebersihan & Spidol Kelas', amount: 50000, date: '05 Okt 2026' }
-    ],
+    balance: 0,
+    bills: [],
+    cashHistory: [],
+    hasPassword: false,
+    cashPeriod: 'bulanan',
+    cashAmount: 0,
     transfers: []
   },
   {
@@ -30,29 +27,13 @@ const DEFAULT_CLASSES = [
     bankName: 'BANK MANDIRI',
     bankNumber: '139-00-2849102-4',
     bankHolder: 'Budi Santoso (Wali Kelas VIII-A)',
-    balance: 2350000,
-    bills: [
-      { id: 'b3', title: 'Iuran Kas Kelas Bulanan', amount: 30000 },
-      { id: 'b4', title: 'Tabungan Kunjungan Belajar', amount: 150000 },
-      { id: 'b5', title: 'Dana Sosial & Santunan Siswa', amount: 50000 }
-    ],
-    cashHistory: [
-      { id: 'c3', type: 'IN', desc: 'Kas Kelas Kolektif Bulan Oktober', amount: 2500000, date: '10 Okt 2026' },
-      { id: 'c4', type: 'OUT', desc: 'Cetak Modul & Papan Informasi Kelas', amount: 150000, date: '14 Okt 2026' }
-    ],
-    transfers: [
-      {
-        id: 'tf-101',
-        studentName: 'Raka Pratama',
-        parentName: 'Bpk. Hendra (Wali Raka)',
-        purpose: 'Tabungan Kunjungan Belajar',
-        amount: 150000,
-        method: 'BRImo (BRI)',
-        note: 'Setoran tabungan tahap 1 Raka',
-        date: 'Hari ini, 09:15',
-        status: 'PENDING'
-      }
-    ]
+    balance: 0,
+    bills: [],
+    cashHistory: [],
+    hasPassword: false,
+    cashPeriod: 'bulanan',
+    cashAmount: 0,
+    transfers: []
   },
   {
     id: 'IX-A',
@@ -62,13 +43,12 @@ const DEFAULT_CLASSES = [
     bankName: 'BANK BCA',
     bankNumber: '7420-8819-21',
     bankHolder: 'H. Rahmat Hidayat (Wali Kelas IX-A)',
-    balance: 3120000,
-    bills: [
-      { id: 'b6', title: 'Kas Kelas IX & Persiapan Wisuda', amount: 100000 }
-    ],
-    cashHistory: [
-      { id: 'c5', type: 'IN', desc: 'Dana Awal Kas Kelas IX-A', amount: 3120000, date: '02 Okt 2026' }
-    ],
+    balance: 0,
+    bills: [],
+    cashHistory: [],
+    hasPassword: false,
+    cashPeriod: 'bulanan',
+    cashAmount: 0,
     transfers: []
   }
 ];
@@ -83,6 +63,14 @@ const state = {
   currentUser: null,
   selectedClassId: 'VIII-A',
   classes: [...DEFAULT_CLASSES],
+  members: [],
+  dues: [],
+  duePayments: [],
+  notifications: [],
+  pendingJoinClassId: '',
+  proofFile: null,
+  proofUrl: '',
+  selectedDueId: '',
   supabaseReady: false,
   adminVerified: false,
   adminAttempts: 0,
@@ -97,6 +85,153 @@ let realtimeChannel = null;
 // Format Rupiah
 function formatRp(num) {
   return 'Rp ' + Number(num || 0).toLocaleString('id-ID');
+}
+
+// =====================================================
+// Input Rupiah: tampilkan 1.000 / 100.000 / 1.000.000
+// =====================================================
+function formatRupiahDigits(value) {
+  const digits = String(value ?? '').replace(/\D/g, '');
+  if (!digits) return '';
+  return digits
+    .replace(/^0+(?=\d)/, '')
+    .replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+function parseRupiah(value) {
+  const digits = String(value ?? '').replace(/\D/g, '');
+  return digits ? Number(digits) : 0;
+}
+
+function setRupiahValue(inputId, value) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const digits = String(value ?? '').replace(/\D/g, '');
+  input.value = digits ? formatRupiahDigits(digits) : '';
+}
+
+function setupRupiahInputs() {
+  document.querySelectorAll('[data-rupiah]').forEach((input) => {
+    if (input.dataset.rupiahReady === 'true') return;
+    input.dataset.rupiahReady = 'true';
+
+    input.addEventListener('input', () => {
+      const caretFromEnd = input.value.length - (input.selectionStart ?? input.value.length);
+      input.value = formatRupiahDigits(input.value);
+
+      const position = Math.max(0, input.value.length - caretFromEnd);
+      if (typeof input.setSelectionRange === 'function') {
+        input.setSelectionRange(position, position);
+      }
+    });
+
+    if (input.value) {
+      input.value = formatRupiahDigits(input.value);
+    }
+  });
+}
+
+// =====================================================
+// Tampilkan / sembunyikan kata sandi (ikon mata)
+// =====================================================
+const PASSWORD_EYE_SVG =
+  '<svg class="icon-eye" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+
+const PASSWORD_EYE_OFF_SVG =
+  '<svg class="icon-eye-off" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a20.8 20.8 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 7 11 7a20.8 20.8 0 0 1-3.16 4.19"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+
+function togglePasswordVisibility(inputId, button) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+
+  const show = input.type === 'password';
+  input.type = show ? 'text' : 'password';
+
+  if (button) {
+    button.classList.toggle('is-visible', show);
+    button.setAttribute('aria-pressed', String(show));
+    button.setAttribute('aria-label', show ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi');
+  }
+
+  input.focus({ preventScroll: true });
+}
+
+function setupPasswordToggles() {
+  document.querySelectorAll('input[type="password"]').forEach((input) => {
+    if (input.dataset.passwordToggleReady === 'true') return;
+    input.dataset.passwordToggleReady = 'true';
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'password-field';
+    input.parentNode.insertBefore(wrapper, input);
+    wrapper.appendChild(input);
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'password-toggle';
+    button.setAttribute('aria-label', 'Tampilkan kata sandi');
+    button.setAttribute('aria-pressed', 'false');
+    button.innerHTML = PASSWORD_EYE_SVG + PASSWORD_EYE_OFF_SVG;
+    button.addEventListener('click', () => togglePasswordVisibility(input.id, button));
+    wrapper.appendChild(button);
+  });
+}
+
+// =====================================================
+// Label periode & helper data
+// =====================================================
+const PERIOD_LABELS = {
+  harian: 'hari',
+  mingguan: 'minggu',
+  bulanan: 'bulan',
+  kuartalan: 'kuartal',
+  semesteran: 'semester',
+  tahunan: 'tahun',
+  sekali: 'sekali bayar'
+};
+
+function periodTypeLabel(type) {
+  return PERIOD_LABELS[type] || type || 'periode';
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function getMyMember(classId) {
+  if (!state.currentUser?.uid) return null;
+  return state.members.find(
+    member => member.classId === classId && member.userId === state.currentUser.uid
+  ) || null;
+}
+
+function getClassMembers(classId) {
+  return state.members.filter(member => member.classId === classId);
+}
+
+function getClassDues(classId) {
+  return state.dues.filter(due => due.classId === classId);
+}
+
+function getDuePayment(dueId, memberId) {
+  if (!memberId) return null;
+  return state.duePayments.find(payment => payment.dueId === dueId && payment.memberId === memberId) || null;
+}
+
+function buildClassId(grade, name) {
+  const suffix = String(name || '')
+    .replace(/^kelas\s+/i, '')
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  return suffix || (grade + '-' + Date.now());
 }
 
 // Notifikasi Toast
@@ -182,32 +317,71 @@ async function loadDataFromSupabase() {
       classes = await seedClassesIfEmpty(DEFAULT_CLASSES);
     }
 
-    if (classes.length > 0) {
-      state.classes = classes;
-      state.supabaseReady = true;
-    } else {
+    const data = await loadAppData(state.currentUser?.uid);
+    applyAppData(data);
+
+    if (state.classes.length === 0) {
       state.classes = [...DEFAULT_CLASSES];
       state.supabaseReady = false;
       showToast('Tabel classes masih kosong. Jalankan seed data di supabase-schema.sql.');
+    } else {
+      state.supabaseReady = true;
     }
 
-    console.log('✅ Data kelas dimuat dari Supabase:', state.classes.length, 'kelas');
+    console.log('✅ Data dimuat dari Supabase:', state.classes.length, 'kelas,', state.members.length, 'anggota,', state.dues.length, 'iuran');
     return state.classes;
   } catch (error) {
     console.error('❌ Gagal memuat data Supabase:', error);
     state.classes = [...DEFAULT_CLASSES];
+    state.members = [];
+    state.dues = [];
+    state.duePayments = [];
+    state.notifications = [];
     state.supabaseReady = false;
     showToast('Gagal memuat Supabase: ' + error.message);
     return state.classes;
   }
 }
 
-async function refreshClassesFromSupabase() {
-  const classes = await loadAllClasses();
-  if (classes.length > 0) {
-    state.classes = classes;
-    state.supabaseReady = true;
+function applyAppData(data) {
+  state.classes = data.classes || [];
+  state.members = data.members || [];
+  state.dues = data.dues || [];
+  state.duePayments = data.duePayments || [];
+  state.notifications = data.notifications || [];
+
+  if (state.classes.length > 0 && !state.classes.some(cls => cls.id === state.selectedClassId)) {
+    state.selectedClassId = state.classes[0].id;
   }
+
+  if (!state.selectedDueId || !state.dues.some(due => due.id === state.selectedDueId)) {
+    const classDues = getClassDues(state.selectedClassId);
+    state.selectedDueId = classDues[0]?.id || '';
+  }
+}
+
+async function refreshAllData() {
+  if (!isSupabaseConfigured()) return;
+  const data = await loadAppData(state.currentUser?.uid);
+  applyAppData(data);
+  rerenderActiveView();
+}
+
+function rerenderActiveView() {
+  const activeView = document.querySelector('.view-section.active');
+  if (!activeView) return;
+
+  if (activeView.id === 'viewGuru') {
+    renderGuruDashboard();
+  } else if (activeView.id === 'viewOrtu') {
+    renderOrtuPortal();
+  } else if (activeView.id === 'viewClassSelect') {
+    renderClassCards();
+  }
+}
+
+async function refreshClassesFromSupabase() {
+  await refreshAllData();
   return state.classes;
 }
 
@@ -215,23 +389,8 @@ function startRealtimeListener() {
   if (realtimeChannel || !isSupabaseConfigured()) return;
 
   try {
-    realtimeChannel = listenToClasses((updatedClasses) => {
-      if (updatedClasses.length > 0) {
-        state.classes = updatedClasses;
-        state.supabaseReady = true;
-      }
-
-      // Re-render halaman yang sedang terbuka
-      const activeView = document.querySelector('.view-section.active');
-      if (activeView) {
-        if (activeView.id === 'viewGuru') {
-          renderGuruDashboard();
-        } else if (activeView.id === 'viewOrtu') {
-          renderOrtuPortal();
-        } else if (activeView.id === 'viewClassSelect') {
-          renderClassCards();
-        }
-      }
+    realtimeChannel = listenToClasses(async () => {
+      await refreshAllData();
     });
   } catch (error) {
     console.error('Listener error:', error);
@@ -819,6 +978,15 @@ async function logout() {
   state.adminAttempts = 0;
   state.pendingRecoveryCode = '';
   state.recoveryContinueAction = 'classSelect';
+  state.members = [];
+  state.dues = [];
+  state.duePayments = [];
+  state.notifications = [];
+  state.selectedDueId = '';
+  state.pendingJoinClassId = '';
+  clearProofFile();
+  closeJoinClassModal();
+  closeInbox();
   setAuthMode('login');
 
   const form = document.getElementById('authForm');
@@ -871,26 +1039,53 @@ function renderClassCards() {
 
   const filtered = state.classes.filter(cls => {
     const matchGrade = grade === 'ALL' || cls.grade === grade;
-    const matchText = cls.name.toLowerCase().includes(query) || cls.homeroom.toLowerCase().includes(query);
+    const matchText =
+      String(cls.name || '').toLowerCase().includes(query) ||
+      String(cls.homeroom || '').toLowerCase().includes(query);
     return matchGrade && matchText;
   });
 
-  container.innerHTML = filtered.map(cls => `
-    <div class="glass-card class-card" onclick="selectClassAndEnter('${cls.id}')">
-      <div class="class-card-top">
-        <span class="class-name">${cls.name}</span>
-        <span class="badge ${state.authRole === 'guru' ? 'badge-indigo' : 'badge-emerald'}">Tingkat ${cls.grade}</span>
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="glass-card"><p class="section-desc">Belum ada kelas yang cocok. Admin dapat menambahkan kelas baru dari dashboard.</p></div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(cls => {
+    const member = state.authRole === 'ortu' ? getMyMember(cls.id) : null;
+    const joined = Boolean(member);
+    const passwordBadge = cls.hasPassword
+      ? `<span class="badge badge-emerald">🔐 Bersandi</span>`
+      : `<span class="badge badge-amber">⚠️ Sandi belum diatur</span>`;
+    const joinBadge = state.authRole === 'ortu' && joined
+      ? `<span class="badge badge-cyan">✅ Sudah bergabung</span>`
+      : '';
+
+    let actionLabel = 'Masuk ke ' + escapeHtml(cls.name) + ' →';
+    if (state.authRole === 'ortu' && !joined) {
+      actionLabel = cls.hasPassword
+        ? 'Masukkan Sandi & Gabung →'
+        : 'Sandi Belum Diatur — Hubungi Admin';
+    }
+
+    return `
+      <div class="glass-card class-card" onclick="selectClassAndEnter('${escapeHtml(cls.id)}')">
+        <div class="class-card-top">
+          <span class="class-name">${escapeHtml(cls.name)}</span>
+          <span class="badge ${state.authRole === 'guru' ? 'badge-indigo' : 'badge-emerald'}">Tingkat ${escapeHtml(cls.grade)}</span>
+        </div>
+        <div class="class-meta">
+          <div>👨‍🏫 <strong>Wali Kelas:</strong> ${escapeHtml(cls.homeroom)}</div>
+          <div>🏦 <strong>Rekening:</strong> ${escapeHtml(cls.bankName)} (${escapeHtml(cls.bankNumber)})</div>
+          <div>💰 <strong>Saldo Kas:</strong> ${formatRp(cls.balance)}</div>
+          <div>📅 <strong>Kas:</strong> ${formatRp(cls.cashAmount)} / ${periodTypeLabel(cls.cashPeriod)}</div>
+        </div>
+        <div class="class-badges">${passwordBadge}${joinBadge}</div>
+        <button type="button" class="glass-btn ${state.authRole === 'guru' ? 'btn-primary-guru' : 'btn-primary-ortu'} full-width">
+          ${actionLabel}
+        </button>
       </div>
-      <div class="class-meta">
-        <div>👨‍🏫 <strong>Wali Kelas:</strong> ${cls.homeroom}</div>
-        <div>🏦 <strong>Rekening:</strong> ${cls.bankName} (${cls.bankNumber})</div>
-        <div>💰 <strong>Saldo Kas:</strong> ${formatRp(cls.balance)}</div>
-      </div>
-      <button type="button" class="glass-btn ${state.authRole === 'guru' ? 'btn-primary-guru' : 'btn-primary-ortu'} full-width">
-        Masuk ke ${cls.name} →
-      </button>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
 function selectClassAndEnter(classId) {
@@ -907,7 +1102,24 @@ function selectClassAndEnter(classId) {
     return;
   }
 
+  const cls = state.classes.find(item => item.id === classId);
+  if (!cls) {
+    showToast('Kelas tidak ditemukan.');
+    return;
+  }
+
+  if (state.authRole === 'ortu') {
+    const member = getMyMember(classId);
+    if (!member) {
+      openJoinClassModal(classId);
+      return;
+    }
+    state.currentUser.childName = member.studentName || state.currentUser.childName;
+  }
+
   state.selectedClassId = classId;
+  state.selectedDueId = getClassDues(classId)[0]?.id || '';
+
   if (state.authRole === 'guru') {
     renderGuruDashboard();
     showView('viewGuru');
@@ -915,6 +1127,83 @@ function selectClassAndEnter(classId) {
     renderOrtuPortal();
     switchOrtuTab('dashboard');
     showView('viewOrtu');
+  }
+}
+
+// =========================================================
+// MODAL SANDI KELAS (ORANG TUA)
+// =========================================================
+function openJoinClassModal(classId) {
+  const cls = state.classes.find(item => item.id === classId);
+  if (!cls) return;
+
+  if (!cls.hasPassword) {
+    showToast('Kelas ini belum memiliki sandi. Hubungi admin/wali kelas terlebih dahulu.');
+    return;
+  }
+
+  state.pendingJoinClassId = classId;
+  document.getElementById('joinClassDesc').innerHTML =
+    'Masukkan sandi untuk bergabung ke <strong>' + escapeHtml(cls.name) +
+    '</strong>. Sandi hanya diminta sekali.';
+  document.getElementById('joinStudentName').value = state.currentUser?.childName || '';
+  document.getElementById('joinClassPassword').value = '';
+  document.getElementById('joinClassModal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('joinStudentName').focus(), 60);
+}
+
+function closeJoinClassModal() {
+  state.pendingJoinClassId = '';
+  document.getElementById('joinClassModal').classList.add('hidden');
+}
+
+async function handleJoinClass(e) {
+  e.preventDefault();
+  if (!requireWritableSession()) return;
+
+  const classId = state.pendingJoinClassId;
+  const studentName = document.getElementById('joinStudentName').value.trim();
+  const password = document.getElementById('joinClassPassword').value;
+  const submitBtn = document.getElementById('joinClassSubmit');
+
+  if (!classId) {
+    showToast('Pilih kelas terlebih dahulu.');
+    return;
+  }
+  if (studentName.length < 2) {
+    showToast('Nama siswa wajib diisi minimal 2 karakter.');
+    return;
+  }
+  if (!password) {
+    showToast('Masukkan sandi kelas.');
+    return;
+  }
+
+  const originalText = submitBtn.textContent;
+  submitBtn.textContent = 'Memeriksa sandi...';
+  submitBtn.disabled = true;
+
+  try {
+    await joinClassWithPassword(classId, password, studentName);
+    await refreshAllData();
+
+    const member = getMyMember(classId);
+    if (member) state.currentUser.childName = member.studentName;
+
+    state.selectedClassId = classId;
+    state.selectedDueId = getClassDues(classId)[0]?.id || '';
+    closeJoinClassModal();
+    renderOrtuPortal();
+    switchOrtuTab('dashboard');
+    showView('viewOrtu');
+    showToast('Berhasil bergabung ke kelas. Data Anda sudah masuk ke tabel admin.');
+  } catch (error) {
+    console.error('Gagal bergabung kelas:', error);
+    showToast('Gagal bergabung: ' + (error.message || 'Sandi kelas salah.'));
+    document.getElementById('joinClassPassword').select();
+  } finally {
+    submitBtn.textContent = originalText;
+    submitBtn.disabled = false;
   }
 }
 
@@ -928,10 +1217,17 @@ function renderGuruDashboard() {
   }
 
   const cls = getActiveClass();
+  if (!cls) {
+    showToast('Belum ada kelas. Tambahkan kelas baru dari dashboard admin.');
+    return;
+  }
+
   const pendingTransfers = cls.transfers.filter(t => t.status === 'PENDING');
 
   document.getElementById('guruClassTitle').textContent = cls.name;
   document.getElementById('guruTeacherLabel').textContent = 'Wali Kelas: ' + cls.homeroom;
+  document.getElementById('guruCashPeriodInfo').textContent =
+    'Kas kelas: ' + formatRp(cls.cashAmount || 0) + ' / ' + periodTypeLabel(cls.cashPeriod);
   document.getElementById('guruStatBalance').textContent = formatRp(cls.balance);
   document.getElementById('guruStatPending').textContent = pendingTransfers.length + ' Kiriman';
   document.getElementById('guruStatBank').textContent = cls.bankName + ' • ' + cls.bankNumber;
@@ -952,9 +1248,14 @@ function renderGuruDashboard() {
     pendingContainer.innerHTML = pendingTransfers.map(tf => `
       <div class="glass-item">
         <div>
-          <strong>${tf.studentName} — ${formatRp(tf.amount)}</strong>
-          <div style="font-size:0.8rem; color:#cbd5e1;">${tf.purpose} • Via ${tf.method}</div>
-          <small style="color:#94a3b8;">Catatan: "${tf.note}" (${tf.date})</small>
+          <strong>${escapeHtml(tf.studentName)} — ${formatRp(tf.amount)}</strong>
+          <div style="font-size:0.8rem; color:#cbd5e1;">${escapeHtml(tf.purpose)} • Via ${escapeHtml(tf.method)}</div>
+          <small style="color:#94a3b8;">Catatan: "${escapeHtml(tf.note)}" (${escapeHtml(tf.date)})</small>
+          <div class="proof-link-row">
+            ${tf.proofUrl
+              ? `<a class="link-accent" href="${escapeHtml(tf.proofUrl)}" target="_blank" rel="noopener">📷 Lihat bukti foto</a>`
+              : `<span class="text-amber">⚠️ Tanpa bukti foto</span>`}
+          </div>
         </div>
         <div class="item-actions">
           <button type="button" class="glass-btn btn-primary-ortu btn-sm" onclick="verifyTransfer('${tf.id}', true)">Terima</button>
@@ -966,17 +1267,544 @@ function renderGuruDashboard() {
 
   // Render Riwayat Kas Kelas
   const historyContainer = document.getElementById('guruCashHistory');
-  historyContainer.innerHTML = cls.cashHistory.map(item => `
+  historyContainer.innerHTML = cls.cashHistory.length === 0
+    ? `<div class="glass-item"><span>Belum ada mutasi kas. Saldo awal kelas baru selalu Rp 0.</span></div>`
+    : cls.cashHistory.map(item => `
+      <div class="glass-item">
+        <div>
+          <strong>${escapeHtml(item.desc)}</strong>
+          <div style="font-size:0.76rem; color:#94a3b8;">${escapeHtml(item.date)}</div>
+        </div>
+        <strong class="${item.type === 'IN' ? 'text-emerald' : 'text-amber'}">
+          ${item.type === 'IN' ? '+' : '-'} ${formatRp(item.amount)}
+        </strong>
+      </div>
+    `).join('');
+
+  renderClassManagement();
+  renderCashSetting(cls);
+  renderDueHistory();
+  renderChecklist();
+  renderMemberList();
+  renderNotificationDueOptions();
+}
+
+// =========================================================
+// MANAJEMEN KELAS (ADMIN)
+// =========================================================
+function renderClassManagement() {
+  const container = document.getElementById('guruClassList');
+  if (!container) return;
+
+  if (state.classes.length === 0) {
+    container.innerHTML = `<div class="glass-item"><span>Belum ada kelas. Tambahkan kelas pertama Anda.</span></div>`;
+    return;
+  }
+
+  container.innerHTML = state.classes.map(cls => {
+    const memberCount = getClassMembers(cls.id).length;
+    return `
+      <div class="glass-item class-manage-item ${cls.id === state.selectedClassId ? 'is-active' : ''}">
+        <div>
+          <strong>${escapeHtml(cls.name)}</strong>
+          <div class="class-meta-line">Wali: ${escapeHtml(cls.homeroom)} • ${memberCount} orang tua</div>
+          <div class="class-meta-line">
+            ${cls.hasPassword ? '🔐 Sandi aktif' : '⚠️ Sandi belum diatur'} •
+            ${formatRp(cls.cashAmount || 0)} / ${periodTypeLabel(cls.cashPeriod)}
+          </div>
+        </div>
+        <div class="item-actions">
+          <button type="button" class="glass-btn btn-outline btn-sm" onclick="selectClassAndEnter('${escapeHtml(cls.id)}')">Buka</button>
+          <button type="button" class="glass-btn btn-outline btn-sm" onclick="startEditClass('${escapeHtml(cls.id)}')">Ubah</button>
+          <button type="button" class="glass-btn btn-accent-yellow btn-sm" onclick="startEditClass('${escapeHtml(cls.id)}', true)">Sandi</button>
+          <button type="button" class="glass-btn btn-danger btn-sm" onclick="deleteClass('${escapeHtml(cls.id)}')">Hapus</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function startEditClass(classId, focusPassword) {
+  const cls = state.classes.find(item => item.id === classId);
+  if (!cls) return;
+
+  const box = document.getElementById('editClassBox');
+  document.getElementById('editClassId').value = cls.id;
+  document.getElementById('editClassName').value = cls.name;
+  document.getElementById('editClassGrade').value = cls.grade;
+  document.getElementById('editClassHomeroom').value = cls.homeroom;
+  document.getElementById('editClassBankName').value = cls.bankName;
+  document.getElementById('editClassBankNumber').value = cls.bankNumber;
+  document.getElementById('editClassBankHolder').value = cls.bankHolder;
+  document.getElementById('editClassCashPeriod').value = cls.cashPeriod || 'bulanan';
+  setRupiahValue('editClassCashAmount', cls.cashAmount || 0);
+  document.getElementById('editClassPassword').value = '';
+
+  box.classList.remove('hidden');
+  box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  if (focusPassword) {
+    setTimeout(() => document.getElementById('editClassPassword').focus(), 250);
+  }
+}
+
+function cancelEditClass() {
+  document.getElementById('editClassBox').classList.add('hidden');
+}
+
+async function handleCreateClass(e) {
+  e.preventDefault();
+  if (!requireWritableSession()) return;
+
+  const name = document.getElementById('newClassName').value.trim();
+  const grade = document.getElementById('newClassGrade').value;
+  const homeroom = document.getElementById('newClassHomeroom').value.trim();
+  const bankName = document.getElementById('newClassBankName').value.trim();
+  const bankNumber = document.getElementById('newClassBankNumber').value.trim();
+  const bankHolder = document.getElementById('newClassBankHolder').value.trim();
+  const password = document.getElementById('newClassPassword').value;
+  const cashPeriod = document.getElementById('newClassCashPeriod').value;
+  const cashAmount = parseRupiah(document.getElementById('newClassCashAmount').value);
+
+  if (!name || !homeroom || !bankName || !bankNumber || !bankHolder) {
+    showToast('Semua data kelas wajib diisi.');
+    return;
+  }
+  if (password.length < 4) {
+    showToast('Sandi kelas minimal 4 karakter.');
+    return;
+  }
+
+  try {
+    await createClassWithPassword({
+      id: buildClassId(grade, name),
+      grade,
+      name,
+      homeroom,
+      bankName,
+      bankNumber,
+      bankHolder,
+      password,
+      cashPeriod,
+      cashAmount
+    });
+
+    e.target.reset();
+    await refreshAllData();
+    renderGuruDashboard();
+    showToast('Kelas baru berhasil dibuat dengan saldo awal Rp 0.');
+  } catch (error) {
+    console.error('Gagal membuat kelas:', error);
+    showToast('Gagal membuat kelas: ' + (error.message || 'Kode kelas mungkin sudah dipakai.'));
+  }
+}
+
+async function handleSaveClassEdit(e) {
+  e.preventDefault();
+  if (!requireWritableSession()) return;
+
+  const id = document.getElementById('editClassId').value;
+  const name = document.getElementById('editClassName').value.trim();
+  const grade = document.getElementById('editClassGrade').value;
+  const homeroom = document.getElementById('editClassHomeroom').value.trim();
+  const bankName = document.getElementById('editClassBankName').value.trim();
+  const bankNumber = document.getElementById('editClassBankNumber').value.trim();
+  const bankHolder = document.getElementById('editClassBankHolder').value.trim();
+  const cashPeriod = document.getElementById('editClassCashPeriod').value;
+  const cashAmount = parseRupiah(document.getElementById('editClassCashAmount').value);
+  const newPassword = document.getElementById('editClassPassword').value;
+
+  if (!id || !name || !homeroom) {
+    showToast('Nama kelas dan wali kelas wajib diisi.');
+    return;
+  }
+  if (newPassword && newPassword.length < 4) {
+    showToast('Sandi kelas baru minimal 4 karakter.');
+    return;
+  }
+
+  try {
+    await updateClassDetails({
+      id, name, grade, homeroom, bankName, bankNumber, bankHolder, cashPeriod, cashAmount
+    });
+
+    if (newPassword) {
+      await setClassPassword(id, newPassword);
+    }
+
+    cancelEditClass();
+    await refreshAllData();
+    renderGuruDashboard();
+    showToast('Data kelas berhasil diperbarui.');
+  } catch (error) {
+    console.error('Gagal mengubah kelas:', error);
+    showToast('Gagal mengubah kelas: ' + error.message);
+  }
+}
+
+async function deleteClass(classId) {
+  if (!requireWritableSession()) return;
+
+  const cls = state.classes.find(item => item.id === classId);
+  if (!cls) return;
+
+  const confirmed = window.confirm(
+    'Hapus ' + cls.name + '?\n\nSeluruh anggota, iuran, dan riwayat transfer kelas ini juga akan dihapus. Tindakan ini tidak bisa dibatalkan.'
+  );
+  if (!confirmed) return;
+
+  try {
+    await deleteClassById(classId);
+    if (state.selectedClassId === classId) {
+      state.selectedClassId = '';
+      state.selectedDueId = '';
+    }
+    await refreshAllData();
+    renderGuruDashboard();
+    showToast('Kelas ' + cls.name + ' berhasil dihapus.');
+  } catch (error) {
+    console.error('Gagal menghapus kelas:', error);
+    showToast('Gagal menghapus kelas: ' + error.message);
+  }
+}
+
+// =========================================================
+// PENGATURAN KAS & PROGRAM IURAN
+// =========================================================
+function renderCashSetting(cls) {
+  if (!cls) return;
+  document.getElementById('cashPeriodSelect').value = cls.cashPeriod || 'bulanan';
+  setRupiahValue('cashPeriodAmount', cls.cashAmount || 0);
+  document.getElementById('guruCashPeriodBadge').textContent =
+    formatRp(cls.cashAmount || 0) + ' / ' + periodTypeLabel(cls.cashPeriod);
+  document.getElementById('guruCashSettingInfo').textContent =
+    'Kas kelas ' + cls.name + ' ditagih ' + formatRp(cls.cashAmount || 0) +
+    ' setiap ' + periodTypeLabel(cls.cashPeriod) + '.';
+}
+
+async function handleSaveCashSetting(e) {
+  e.preventDefault();
+  if (!requireWritableSession()) return;
+
+  const cls = getActiveClass();
+  if (!cls) return;
+
+  const cashPeriod = document.getElementById('cashPeriodSelect').value;
+  const cashAmount = parseRupiah(document.getElementById('cashPeriodAmount').value);
+
+  try {
+    await updateClassDetails({
+      id: cls.id,
+      grade: cls.grade,
+      name: cls.name,
+      homeroom: cls.homeroom,
+      bankName: cls.bankName,
+      bankNumber: cls.bankNumber,
+      bankHolder: cls.bankHolder,
+      cashPeriod,
+      cashAmount
+    });
+    await refreshAllData();
+    renderGuruDashboard();
+    showToast('Pengaturan kas kelas berhasil disimpan.');
+  } catch (error) {
+    console.error('Gagal menyimpan pengaturan kas:', error);
+    showToast('Gagal menyimpan pengaturan kas: ' + error.message);
+  }
+}
+
+function renderDueHistory() {
+  const container = document.getElementById('guruDueHistory');
+  if (!container) return;
+
+  const dues = getClassDues(state.selectedClassId);
+  if (dues.length === 0) {
+    container.innerHTML = `<div class="glass-item"><span>Belum ada program iuran untuk kelas ini.</span></div>`;
+    return;
+  }
+
+  container.innerHTML = dues.map(due => `
     <div class="glass-item">
       <div>
-        <strong>${item.desc}</strong>
-        <div style="font-size:0.76rem; color:#94a3b8;">${item.date}</div>
+        <strong>${escapeHtml(due.title)}</strong>
+        <div class="class-meta-line">
+          ${formatRp(due.amount)} • ${periodTypeLabel(due.periodType)}
+          ${due.periodLabel ? ' • ' + escapeHtml(due.periodLabel) : ''}
+        </div>
+        <small style="color:#94a3b8;">
+          ${due.dueDate ? 'Jatuh tempo: ' + escapeHtml(due.dueDate) : 'Tanpa jatuh tempo'}
+        </small>
       </div>
-      <strong class="${item.type === 'IN' ? 'text-emerald' : 'text-amber'}">
-        ${item.type === 'IN' ? '+' : '-'} ${formatRp(item.amount)}
-      </strong>
+      <div class="item-actions">
+        <button type="button" class="glass-btn btn-outline btn-sm" onclick="selectChecklistDue('${due.id}')">Checklist</button>
+        <button type="button" class="glass-btn btn-danger btn-sm" onclick="deleteDue('${due.id}')">Hapus</button>
+      </div>
     </div>
   `).join('');
+}
+
+async function handleAddDue(e) {
+  e.preventDefault();
+  if (!requireWritableSession()) return;
+
+  const cls = getActiveClass();
+  if (!cls) return;
+
+  const title = document.getElementById('dueTitleInput').value.trim();
+  const amount = parseRupiah(document.getElementById('dueAmountInput').value);
+  const periodType = document.getElementById('duePeriodType').value;
+  const periodLabel = document.getElementById('duePeriodLabel').value.trim();
+  const dueDate = document.getElementById('dueDateInput').value || null;
+
+  if (!title || amount <= 0) {
+    showToast('Nama iuran dan nominal harus valid.');
+    return;
+  }
+
+  try {
+    await createDue({
+      classId: cls.id,
+      title,
+      amount,
+      periodType,
+      periodLabel,
+      dueDate
+    });
+    e.target.reset();
+    await refreshAllData();
+    renderGuruDashboard();
+    showToast('Program iuran ditambahkan. Notifikasi otomatis dikirim ke inbox orang tua.');
+  } catch (error) {
+    console.error('Gagal menambah iuran:', error);
+    showToast('Gagal menambah iuran: ' + error.message);
+  }
+}
+
+async function deleteDue(dueId) {
+  if (!requireWritableSession()) return;
+
+  const due = state.dues.find(item => item.id === dueId);
+  if (!due) return;
+
+  if (!window.confirm('Hapus program iuran "' + due.title + '" beserta status pembayarannya?')) return;
+
+  try {
+    await deleteDueById(dueId);
+    if (state.selectedDueId === dueId) state.selectedDueId = '';
+    await refreshAllData();
+    renderGuruDashboard();
+    showToast('Program iuran berhasil dihapus.');
+  } catch (error) {
+    console.error('Gagal menghapus iuran:', error);
+    showToast('Gagal menghapus iuran: ' + error.message);
+  }
+}
+
+function selectChecklistDue(dueId) {
+  state.selectedDueId = dueId;
+  renderChecklist();
+  document.getElementById('checklistDueSelect').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// =========================================================
+// CHECKLIST PEMBAYARAN PER ORANG TUA
+// =========================================================
+function renderChecklist() {
+  const select = document.getElementById('checklistDueSelect');
+  const container = document.getElementById('guruChecklistContainer');
+  if (!select || !container) return;
+
+  const dues = getClassDues(state.selectedClassId);
+  if (dues.length === 0) {
+    select.innerHTML = `<option value="">Belum ada iuran</option>`;
+    container.innerHTML = `<div class="glass-item"><span>Buat program iuran terlebih dahulu.</span></div>`;
+    return;
+  }
+
+  if (!dues.some(due => due.id === state.selectedDueId)) {
+    state.selectedDueId = dues[0].id;
+  }
+
+  select.innerHTML = dues.map(due =>
+    `<option value="${due.id}" ${due.id === state.selectedDueId ? 'selected' : ''}>${escapeHtml(due.title)} — ${formatRp(due.amount)}</option>`
+  ).join('');
+
+  const members = getClassMembers(state.selectedClassId);
+  if (members.length === 0) {
+    container.innerHTML = `<div class="glass-item"><span>Belum ada orang tua yang bergabung ke kelas ini.</span></div>`;
+    return;
+  }
+
+  const rows = members.map((member, index) => {
+    const payment = getDuePayment(state.selectedDueId, member.id);
+    const status = payment?.status || 'UNPAID';
+    let statusHtml = `<span class="status-chip status-unpaid">❌ Belum Bayar</span>`;
+    if (status === 'PAID') statusHtml = `<span class="status-chip status-paid">✅ Lunas</span>`;
+    if (status === 'PENDING') statusHtml = `<span class="status-chip status-pending">⏳ Menunggu Verifikasi</span>`;
+
+    const proof = payment?.proofUrl
+      ? `<a class="link-accent" href="${escapeHtml(payment.proofUrl)}" target="_blank" rel="noopener">📷 Lihat Foto</a>`
+      : '<span class="text-muted">—</span>';
+
+    return `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${escapeHtml(member.parentName || 'Orang Tua')}</td>
+        <td>${escapeHtml(member.studentName)}</td>
+        <td>${statusHtml}</td>
+        <td>${proof}</td>
+        <td>
+          <button type="button" class="glass-btn ${status === 'PAID' ? 'btn-danger' : 'btn-primary-ortu'} btn-sm"
+            onclick="toggleChecklistPayment('${state.selectedDueId}', '${member.id}', ${status !== 'PAID'})">
+            ${status === 'PAID' ? 'Batalkan Lunas' : 'Tandai Lunas'}
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>No</th>
+          <th>Orang Tua</th>
+          <th>Siswa</th>
+          <th>Status</th>
+          <th>Bukti</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+async function toggleChecklistPayment(dueId, memberId, paid) {
+  if (!requireWritableSession()) return;
+
+  try {
+    await adminMarkDuePayment(dueId, memberId, paid);
+    await refreshAllData();
+    renderGuruDashboard();
+    showToast(paid ? 'Status pembayaran ditandai lunas.' : 'Status pembayaran dikembalikan ke belum bayar.');
+  } catch (error) {
+    console.error('Gagal mengubah checklist:', error);
+    showToast('Gagal mengubah checklist: ' + error.message);
+  }
+}
+
+function renderMemberList() {
+  const container = document.getElementById('guruMemberList');
+  const badge = document.getElementById('guruMemberCountBadge');
+  if (!container || !badge) return;
+
+  const members = getClassMembers(state.selectedClassId);
+  badge.textContent = members.length + ' Orang Tua';
+
+  if (members.length === 0) {
+    container.innerHTML = `<div class="glass-item"><span>Belum ada orang tua yang bergabung. Bagikan sandi kelas agar mereka bisa masuk.</span></div>`;
+    return;
+  }
+
+  container.innerHTML = members.map((member, index) => `
+    <div class="glass-item">
+      <div>
+        <strong>${index + 1}. ${escapeHtml(member.parentName || 'Orang Tua')}</strong>
+        <div class="class-meta-line">Siswa: ${escapeHtml(member.studentName)}</div>
+        <small style="color:#94a3b8;">Bergabung: ${formatDateTime(member.createdAt)}</small>
+      </div>
+      <span class="badge badge-emerald">✅ Terdaftar</span>
+    </div>
+  `).join('');
+}
+
+// =========================================================
+// NOTIFIKASI / INBOX (ADMIN)
+// =========================================================
+function renderNotificationDueOptions() {
+  const select = document.getElementById('notifDueSelect');
+  if (!select) return;
+
+  const dues = getClassDues(state.selectedClassId);
+  select.innerHTML = dues.length === 0
+    ? `<option value="">Belum ada iuran</option>`
+    : dues.map(due =>
+      `<option value="${due.id}" ${due.id === state.selectedDueId ? 'selected' : ''}>${escapeHtml(due.title)} — ${formatRp(due.amount)}</option>`
+    ).join('');
+
+  syncNotifAudience();
+}
+
+function syncNotifAudience() {
+  const audience = document.getElementById('notifAudience').value;
+  document.getElementById('notifDueGroup').classList.toggle('hidden', audience !== 'unpaid');
+}
+
+async function handleSendNotification(e) {
+  e.preventDefault();
+  if (!requireWritableSession()) return;
+
+  const cls = getActiveClass();
+  if (!cls) return;
+
+  const title = document.getElementById('notifTitleInput').value.trim();
+  const body = document.getElementById('notifBodyInput').value.trim();
+  const audience = document.getElementById('notifAudience').value;
+  const dueId = document.getElementById('notifDueSelect').value;
+
+  if (!title || !body) {
+    showToast('Judul dan pesan notifikasi wajib diisi.');
+    return;
+  }
+
+  try {
+    let count = 0;
+    if (audience === 'unpaid') {
+      if (!dueId) {
+        showToast('Pilih iuran yang belum dibayar terlebih dahulu.');
+        return;
+      }
+      count = await notifyUnpaidMembers(cls.id, dueId, title, body);
+    } else {
+      count = await notifyClassMembers(cls.id, title, body, 'info');
+    }
+
+    document.getElementById('notifTitleInput').value = '';
+    document.getElementById('notifBodyInput').value = '';
+    await refreshAllData();
+    showToast('Notifikasi terkirim ke ' + count + ' inbox orang tua.');
+  } catch (error) {
+    console.error('Gagal mengirim notifikasi:', error);
+    showToast('Gagal mengirim notifikasi: ' + error.message);
+  }
+}
+
+async function sendUnpaidReminder() {
+  if (!requireWritableSession()) return;
+
+  const cls = getActiveClass();
+  if (!cls) return;
+
+  const due = state.dues.find(item => item.id === state.selectedDueId);
+  if (!due) {
+    showToast('Pilih program iuran terlebih dahulu.');
+    return;
+  }
+
+  try {
+    const count = await notifyUnpaidMembers(
+      cls.id,
+      due.id,
+      'Pengingat: ' + due.title,
+      'Anda belum melakukan pembayaran ' + due.title + ' sebesar ' + formatRp(due.amount) +
+        '. Segera kirim bukti pembayaran melalui menu transfer.'
+    );
+    showToast('Pengingat terkirim ke ' + count + ' orang tua yang belum bayar.');
+  } catch (error) {
+    console.error('Gagal mengirim pengingat:', error);
+    showToast('Gagal mengirim pengingat: ' + error.message);
+  }
 }
 
 async function handleUpdateBank(e) {
@@ -984,19 +1812,26 @@ async function handleUpdateBank(e) {
   if (!requireWritableSession()) return;
 
   const cls = getActiveClass();
-  const next = {
-    ...cls,
-    bankName: document.getElementById('inputBankName').value.trim(),
-    bankNumber: document.getElementById('inputBankNumber').value.trim(),
-    bankHolder: document.getElementById('inputBankHolder').value.trim()
-  };
-  next.homeroom = next.bankHolder;
+  if (!cls) return;
+
+  const bankName = document.getElementById('inputBankName').value.trim();
+  const bankNumber = document.getElementById('inputBankNumber').value.trim();
+  const bankHolder = document.getElementById('inputBankHolder').value.trim();
 
   try {
-    // Simpan ke Supabase
-    await saveClassToSupabase(next);
-    Object.assign(cls, next);
+    await updateClassDetails({
+      id: cls.id,
+      grade: cls.grade,
+      name: cls.name,
+      homeroom: cls.homeroom,
+      bankName,
+      bankNumber,
+      bankHolder,
+      cashPeriod: cls.cashPeriod || 'bulanan',
+      cashAmount: cls.cashAmount || 0
+    });
 
+    await refreshAllData();
     renderGuruDashboard();
     showToast('Rekening Wali Kelas berhasil diperbarui untuk halaman Orang Tua!');
   } catch (error) {
@@ -1009,32 +1844,13 @@ async function verifyTransfer(transferId, isApproved) {
   if (!requireWritableSession()) return;
 
   const cls = getActiveClass();
-  const tf = cls.transfers.find(item => item.id === transferId);
+  const tf = cls?.transfers.find(item => item.id === transferId);
   if (!tf) return;
 
   try {
-    // Verifikasi atomik di Supabase (status + saldo + riwayat kas)
+    // Verifikasi atomik di Supabase (status + saldo + riwayat kas + checklist)
     await reviewTransfer(transferId, isApproved);
-
-    // Update tampilan lokal dulu agar responsif
-    tf.status = isApproved ? 'APPROVED' : 'REJECTED';
-    if (isApproved) {
-      cls.balance += tf.amount;
-      cls.cashHistory.unshift({
-        id: 'c-' + Date.now(),
-        type: 'IN',
-        desc: `Transfer ${tf.purpose} (${tf.studentName})`,
-        amount: tf.amount,
-        date: 'Baru saja'
-      });
-    }
-
-    // Sinkronkan ulang dengan data asli dari Supabase
-    try {
-      await refreshClassesFromSupabase();
-    } catch (refreshError) {
-      console.warn('Gagal refresh setelah verifikasi:', refreshError.message);
-    }
+    await refreshAllData();
 
     renderGuruDashboard();
 
@@ -1054,8 +1870,10 @@ async function handleGuruAddCash(e) {
   if (!requireWritableSession()) return;
 
   const cls = getActiveClass();
+  if (!cls) return;
+
   const type = document.getElementById('cashType').value;
-  const amount = Number(document.getElementById('cashAmount').value);
+  const amount = parseRupiah(document.getElementById('cashAmount').value);
   const desc = document.getElementById('cashDesc').value.trim();
 
   if (!amount || amount <= 0) {
@@ -1097,53 +1915,23 @@ async function handleGuruAddCash(e) {
   }
 }
 
-async function handleAddBill(e) {
-  e.preventDefault();
-  if (!requireWritableSession()) return;
-
-  const cls = getActiveClass();
-  const title = document.getElementById('billTitleInput').value.trim();
-  const amount = Number(document.getElementById('billNominalInput').value);
-
-  if (!title || !amount || amount <= 0) {
-    showToast('Nama iuran dan nominal harus valid!');
-    return;
-  }
-
-  const next = {
-    ...cls,
-    bills: [
-      ...cls.bills,
-      {
-        id: 'b-' + Date.now(),
-        title: title,
-        amount: amount
-      }
-    ]
-  };
-
-  try {
-    // Simpan ke Supabase
-    await saveClassToSupabase(next);
-    Object.assign(cls, next);
-
-    e.target.reset();
-    showToast('Program iuran baru berhasil ditambahkan ke halaman Orang Tua!');
-  } catch (error) {
-    console.error('Gagal menambah program iuran:', error);
-    showToast('Gagal menambah program iuran: ' + error.message);
-  }
-}
-
 // =========================================================
 // 4. LOGIKA PORTAL ORANG TUA & HALAMAN TRANSFER (+)
 // =========================================================
 function renderOrtuPortal() {
   const cls = getActiveClass();
+  if (!cls) {
+    showToast('Belum ada kelas. Hubungi admin/wali kelas.');
+    return;
+  }
+
+  const member = getMyMember(cls.id);
+  const studentName = member?.studentName || state.currentUser?.childName || 'Siswa';
 
   document.getElementById('ortuClassTitle').textContent = cls.name + ' (Wali: ' + cls.homeroom + ')';
-  document.getElementById('ortuStudentLabel').textContent =
-    'Siswa: ' + (state.currentUser?.childName || 'Raka Pratama');
+  document.getElementById('ortuStudentLabel').textContent = 'Siswa: ' + studentName;
+  document.getElementById('ortuCashPeriodInfo').textContent =
+    'Iuran kas: ' + formatRp(cls.cashAmount || 0) + ' / ' + periodTypeLabel(cls.cashPeriod);
 
   // Info Rekening di Dashboard & Halaman Transfer
   document.getElementById('ortuBankName').textContent = cls.bankName;
@@ -1160,42 +1948,80 @@ function renderOrtuPortal() {
     .reduce((sum, item) => sum + item.amount, 0);
   document.getElementById('ortuMyVerifiedTotal').textContent = formatRp(verifiedTotal);
 
-  // Daftar Program Iuran Kelas
+  // Daftar Program Iuran Kelas + status pembayaran saya
+  const dues = getClassDues(cls.id);
   const billList = document.getElementById('ortuBillList');
-  billList.innerHTML = cls.bills.map(b => `
-    <div class="glass-item">
-      <div>
-        <strong>${b.title}</strong>
-        <div style="font-size:0.8rem; color:#94a3b8;">Nominal: ${formatRp(b.amount)}</div>
-      </div>
-      <button type="button" class="glass-btn btn-primary-ortu btn-sm" onclick="openTransferWithBill('${b.title}', ${b.amount})">
-        Bayar →
-      </button>
-    </div>
-  `).join('');
+
+  if (dues.length === 0) {
+    billList.innerHTML = `<div class="glass-item"><span>Belum ada program iuran dari wali kelas.</span></div>`;
+  } else {
+    billList.innerHTML = dues.map(due => {
+      const payment = member ? getDuePayment(due.id, member.id) : null;
+      const status = payment?.status || 'UNPAID';
+      let statusHtml = `<span class="status-chip status-unpaid">❌ Belum Bayar</span>`;
+      let actionHtml = `
+        <button type="button" class="glass-btn btn-primary-ortu btn-sm" onclick="openTransferForDue('${due.id}')">
+          Bayar →
+        </button>`;
+
+      if (status === 'PAID') {
+        statusHtml = `<span class="status-chip status-paid">✅ Lunas</span>`;
+        actionHtml = `<button type="button" class="glass-btn btn-outline btn-sm" disabled>Sudah Lunas</button>`;
+      } else if (status === 'PENDING') {
+        statusHtml = `<span class="status-chip status-pending">⏳ Menunggu Verifikasi</span>`;
+        actionHtml = `<button type="button" class="glass-btn btn-outline btn-sm" disabled>Menunggu</button>`;
+      }
+
+      return `
+        <div class="glass-item">
+          <div>
+            <strong>${escapeHtml(due.title)}</strong>
+            <div class="class-meta-line">
+              ${formatRp(due.amount)} • ${periodTypeLabel(due.periodType)}
+              ${due.periodLabel ? ' • ' + escapeHtml(due.periodLabel) : ''}
+            </div>
+            <small style="color:#94a3b8;">
+              ${due.dueDate ? 'Jatuh tempo: ' + escapeHtml(due.dueDate) : 'Tanpa jatuh tempo'}
+            </small>
+            <div class="mt-8">${statusHtml}</div>
+          </div>
+          ${actionHtml}
+        </div>
+      `;
+    }).join('');
+  }
 
   // Dropdown Pilihan Pembayaran di Halaman Transfer (+)
   const purposeSelect = document.getElementById('tfPurpose');
-  purposeSelect.innerHTML = cls.bills.map(b =>
-    `<option value="${b.title}" data-amount="${b.amount}">${b.title} (${formatRp(b.amount)})</option>`
-  ).join('') + `<option value="Tabungan Sukarela Siswa" data-amount="50000">Tabungan Sukarela Siswa</option>`;
+  const previousValue = purposeSelect.value;
+  purposeSelect.innerHTML = dues.map(due =>
+    `<option value="${due.id}" data-amount="${due.amount}" data-title="${escapeHtml(due.title)}">${escapeHtml(due.title)} (${formatRp(due.amount)})</option>`
+  ).join('') + `<option value="sukarela" data-amount="50000" data-title="Tabungan Sukarela Siswa">Tabungan Sukarela Siswa</option>`;
 
-  if (state.currentUser?.childName) {
+  if (previousValue && Array.from(purposeSelect.options).some(option => option.value === previousValue)) {
+    purposeSelect.value = previousValue;
+  }
+
+  if (member) {
+    document.getElementById('tfStudentName').value = member.studentName;
+  } else if (state.currentUser?.childName) {
     document.getElementById('tfStudentName').value = state.currentUser.childName;
   }
 
   // Transparansi Mutasi Kas Kelas (Read-Only)
-  document.getElementById('ortuCashHistory').innerHTML = cls.cashHistory.map(item => `
-    <div class="glass-item">
-      <div>
-        <strong>${item.desc}</strong>
-        <div style="font-size:0.76rem; color:#94a3b8;">${item.date}</div>
+  document.getElementById('ortuCashHistory').innerHTML = cls.cashHistory.length === 0
+    ? `<div class="glass-item"><span>Belum ada mutasi kas.</span></div>`
+    : cls.cashHistory.map(item => `
+      <div class="glass-item">
+        <div>
+          <strong>${escapeHtml(item.desc)}</strong>
+          <div style="font-size:0.76rem; color:#94a3b8;">${escapeHtml(item.date)}</div>
+        </div>
+        <strong class="${item.type === 'IN' ? 'text-emerald' : 'text-amber'}">
+          ${item.type === 'IN' ? '+' : '-'} ${formatRp(item.amount)}
+        </strong>
       </div>
-      <strong class="${item.type === 'IN' ? 'text-emerald' : 'text-amber'}">
-        ${item.type === 'IN' ? '+' : '-'} ${formatRp(item.amount)}
-      </strong>
-    </div>
-  `).join('');
+    `).join('');
 
   // Riwayat Status Kiriman Transfer Orang Tua
   const tfHistoryContainer = document.getElementById('ortuTransferHistoryList');
@@ -1215,15 +2041,24 @@ function renderOrtuPortal() {
       return `
         <div class="glass-item">
           <div>
-            <strong>${tf.purpose} — ${formatRp(tf.amount)}</strong>
-            <div style="font-size:0.8rem; color:#cbd5e1;">Siswa: ${tf.studentName} • Via ${tf.method}</div>
-            <small style="color:#94a3b8;">${tf.date} — "${tf.note}"</small>
+            <strong>${escapeHtml(tf.purpose)} — ${formatRp(tf.amount)}</strong>
+            <div style="font-size:0.8rem; color:#cbd5e1;">Siswa: ${escapeHtml(tf.studentName)} • Via ${escapeHtml(tf.method)}</div>
+            <small style="color:#94a3b8;">${escapeHtml(tf.date)} — "${escapeHtml(tf.note)}"</small>
+            <div class="proof-link-row">
+              ${tf.proofUrl
+                ? `<a class="proof-thumb-link" href="${escapeHtml(tf.proofUrl)}" target="_blank" rel="noopener">
+                     <img class="proof-thumb" src="${escapeHtml(tf.proofUrl)}" alt="Bukti pembayaran" />
+                   </a>`
+                : ''}
+            </div>
           </div>
           <span class="badge ${badgeClass}">${statusLabel}</span>
         </div>
       `;
     }).join('');
   }
+
+  renderInboxBadge();
 }
 
 // Navigasi Sub-Halaman Orang Tua (Dashboard vs Halaman Plus Transfer vs Riwayat)
@@ -1245,28 +2080,133 @@ function switchOrtuTab(tabName) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function openTransferWithBill(title, amount) {
+function openTransferForDue(dueId) {
   switchOrtuTab('transfer');
-  document.getElementById('tfPurpose').value = title;
-  document.getElementById('tfAmount').value = amount;
+  const select = document.getElementById('tfPurpose');
+  if (Array.from(select.options).some(option => option.value === dueId)) {
+    select.value = dueId;
+  }
+  syncBillAmount();
+  document.getElementById('proofDropzone')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function syncBillAmount() {
   const select = document.getElementById('tfPurpose');
   const selectedOption = select.options[select.selectedIndex];
   if (selectedOption && selectedOption.dataset.amount) {
-    document.getElementById('tfAmount').value = selectedOption.dataset.amount;
+    setRupiahValue('tfAmount', selectedOption.dataset.amount);
   }
+  document.getElementById('tfDueId').value =
+    selectedOption && selectedOption.value !== 'sukarela' ? selectedOption.value : '';
 }
 
 function setQuickAmount(val) {
-  document.getElementById('tfAmount').value = val;
+  setRupiahValue('tfAmount', val);
 }
 
 function copyBankNumber() {
   const cls = getActiveClass();
+  if (!cls) return;
   navigator.clipboard?.writeText(cls.bankNumber);
   showToast(`Nomor rekening ${cls.bankNumber} berhasil disalin!`);
+}
+
+// =========================================================
+// BUKTI PEMBAYARAN (FOTO): PILIH / DRAG & DROP / GALERI
+// =========================================================
+const MAX_PROOF_BYTES = 5 * 1024 * 1024;
+
+function isImageProof(file) {
+  if (!file) return false;
+  if (String(file.type || '').startsWith('image/')) return true;
+  return /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(file.name || '');
+}
+
+function pickProofFile(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.target && event.target.id === 'tfProof') return;
+  }
+  document.getElementById('tfProof').click();
+}
+
+function handleProofSelected(event) {
+  const file = event.target.files && event.target.files[0];
+  if (file) setProofFile(file);
+}
+
+function setProofFile(file) {
+  if (!isImageProof(file)) {
+    showToast('Bukti pembayaran harus berupa foto (JPG/PNG/WebP).');
+    return;
+  }
+  if (file.size > MAX_PROOF_BYTES) {
+    showToast('Ukuran foto maksimal 5 MB.');
+    return;
+  }
+
+  state.proofFile = file;
+  const previewWrap = document.getElementById('proofPreviewWrap');
+  const emptyState = document.getElementById('proofEmpty');
+  const preview = document.getElementById('proofPreview');
+  const fileName = document.getElementById('proofFileName');
+
+  if (state.proofUrl && state.proofUrl.startsWith('blob:')) {
+    URL.revokeObjectURL(state.proofUrl);
+  }
+
+  state.proofUrl = URL.createObjectURL(file);
+  preview.src = state.proofUrl;
+  fileName.textContent = file.name + ' • ' + (file.size / 1024).toFixed(0) + ' KB';
+  previewWrap.classList.remove('hidden');
+  emptyState.classList.add('hidden');
+  document.getElementById('proofDropzone').classList.add('has-file');
+}
+
+function clearProofFile() {
+  state.proofFile = null;
+  if (state.proofUrl && state.proofUrl.startsWith('blob:')) {
+    URL.revokeObjectURL(state.proofUrl);
+  }
+  state.proofUrl = '';
+
+  const input = document.getElementById('tfProof');
+  if (input) input.value = '';
+
+  const previewWrap = document.getElementById('proofPreviewWrap');
+  const emptyState = document.getElementById('proofEmpty');
+  if (previewWrap) previewWrap.classList.add('hidden');
+  if (emptyState) emptyState.classList.remove('hidden');
+  const zone = document.getElementById('proofDropzone');
+  if (zone) zone.classList.remove('has-file');
+}
+
+function setupProofDropzone() {
+  const zone = document.getElementById('proofDropzone');
+  if (!zone || zone.dataset.ready === 'true') return;
+  zone.dataset.ready = 'true';
+
+  ['dragenter', 'dragover'].forEach(eventName => {
+    zone.addEventListener(eventName, event => {
+      event.preventDefault();
+      event.stopPropagation();
+      zone.classList.add('is-dragover');
+    });
+  });
+
+  ['dragleave', 'drop'].forEach(eventName => {
+    zone.addEventListener(eventName, event => {
+      event.preventDefault();
+      event.stopPropagation();
+      zone.classList.remove('is-dragover');
+    });
+  });
+
+  zone.addEventListener('drop', event => {
+    const file = event.dataTransfer?.files && event.dataTransfer.files[0];
+    if (file) setProofFile(file);
+  });
 }
 
 async function handleParentTransfer(e) {
@@ -1274,39 +2214,192 @@ async function handleParentTransfer(e) {
   if (!requireWritableSession()) return;
 
   const cls = getActiveClass();
+  if (!cls) return;
+
+  const member = getMyMember(cls.id);
+  if (!member) {
+    showToast('Gabung ke kelas terlebih dahulu sebelum mengirim pembayaran.');
+    openJoinClassModal(cls.id);
+    return;
+  }
+
   const studentName = document.getElementById('tfStudentName').value.trim();
-  const purpose = document.getElementById('tfPurpose').value;
-  const amount = Number(document.getElementById('tfAmount').value);
+  const purposeSelect = document.getElementById('tfPurpose');
+  const selectedOption = purposeSelect.options[purposeSelect.selectedIndex];
+  const purpose = selectedOption?.dataset.title || 'Pembayaran Kas Kelas';
+  const dueId = selectedOption && selectedOption.value !== 'sukarela' ? selectedOption.value : '';
+  const amount = parseRupiah(document.getElementById('tfAmount').value);
   const method = document.getElementById('tfMethod').value;
   const note = document.getElementById('tfNote').value.trim();
+  const proofInput = document.getElementById('tfProof');
+  const proofFile = state.proofFile || (proofInput.files && proofInput.files[0]);
 
   if (!studentName || !purpose || !amount || amount < 5000) {
     showToast('Nama siswa, keperluan, dan nominal minimal Rp 5.000 wajib diisi!');
     return;
   }
 
+  if (!proofFile) {
+    showToast('Bukti pembayaran wajib berupa foto. Pilih dari file/galeri atau tarik ke area unggah.');
+    return;
+  }
+
+  if (!isImageProof(proofFile)) {
+    showToast('Bukti pembayaran harus berupa foto (JPG/PNG/WebP).');
+    return;
+  }
+
+  if (proofFile.size > MAX_PROOF_BYTES) {
+    showToast('Ukuran foto bukti maksimal 5 MB.');
+    return;
+  }
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const originalText = submitBtn?.textContent;
+  if (submitBtn) {
+    submitBtn.textContent = 'Mengunggah bukti foto...';
+    submitBtn.disabled = true;
+  }
+
   try {
-    // Simpan ke Supabase (tabel transfers)
+    const uploaded = await uploadPaymentProof(proofFile);
+
     const savedTransfer = await createTransfer({
       classId: cls.id,
+      memberId: member.id,
+      dueId: dueId || null,
       studentName: studentName,
       parentName: state.currentUser?.name || 'Wali Murid',
       purpose: purpose,
       amount: amount,
       method: method,
       note: note,
+      proofUrl: uploaded.url,
       dateLabel: 'Baru saja'
     });
 
-    cls.transfers.unshift(savedTransfer);
+    if (dueId) {
+      try {
+        await setDuePaymentPending({
+          dueId,
+          classId: cls.id,
+          memberId: member.id,
+          userId: state.currentUser.uid,
+          amount,
+          proofUrl: uploaded.url,
+          note
+        });
+      } catch (paymentError) {
+        console.warn('Transfer tersimpan, tetapi status checklist gagal diperbarui:', paymentError);
+      }
+    }
 
-    document.getElementById('tfNote').value = '';
+    clearProofFile();
+    e.target.reset();
+    await refreshAllData();
     renderOrtuPortal();
     switchOrtuTab('history');
-    showToast('Konfirmasi transfer terkirim! Menunggu verifikasi Wali Kelas.');
+    showToast('Pembayaran terkirim! Bukti foto Anda menunggu verifikasi Wali Kelas.');
   } catch (error) {
     console.error('Gagal mengirim konfirmasi transfer:', error);
-    showToast('Gagal mengirim konfirmasi transfer: ' + error.message);
+    showToast('Gagal mengirim pembayaran: ' + (error.message || 'Coba lagi.'));
+  } finally {
+    if (submitBtn) {
+      submitBtn.textContent = originalText;
+      submitBtn.disabled = false;
+    }
+  }
+}
+
+// =========================================================
+// INBOX NOTIFIKASI ORANG TUA
+// =========================================================
+function formatDateTime(value) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString('id-ID', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function getUnreadNotificationCount() {
+  return state.notifications.filter(item => !item.isRead).length;
+}
+
+function renderInboxBadge() {
+  const badge = document.getElementById('ortuInboxBadge');
+  if (!badge) return;
+  const unread = getUnreadNotificationCount();
+  badge.textContent = unread > 99 ? '99+' : String(unread);
+  badge.classList.toggle('hidden', unread === 0);
+}
+
+function renderInboxList() {
+  const list = document.getElementById('inboxList');
+  const summary = document.getElementById('inboxSummary');
+  if (!list || !summary) return;
+
+  const unread = getUnreadNotificationCount();
+  summary.textContent = state.notifications.length + ' pesan • ' + unread + ' belum dibaca';
+
+  if (state.notifications.length === 0) {
+    list.innerHTML = `<div class="glass-item"><span>Belum ada notifikasi. Pengumuman dari wali kelas akan tampil di sini.</span></div>`;
+    return;
+  }
+
+  list.innerHTML = state.notifications.map(item => `
+    <button type="button" class="inbox-item ${item.isRead ? '' : 'unread'}" onclick="markInboxItemRead('${item.id}')">
+      <div class="inbox-item-head">
+        <strong>${item.isRead ? '' : '<span class="unread-dot"></span>'}${escapeHtml(item.title)}</strong>
+        <small>${formatDateTime(item.createdAt)}</small>
+      </div>
+      <p>${escapeHtml(item.body)}</p>
+      <span class="badge ${item.isRead ? 'badge-indigo' : 'badge-amber'}">${item.isRead ? 'Sudah dibaca' : 'Belum dibaca'}</span>
+    </button>
+  `).join('');
+}
+
+function openInbox() {
+  renderInboxList();
+  document.getElementById('inboxModal').classList.remove('hidden');
+}
+
+function closeInbox() {
+  document.getElementById('inboxModal').classList.add('hidden');
+}
+
+async function markInboxItemRead(notificationId) {
+  const item = state.notifications.find(notification => notification.id === notificationId);
+  if (!item || item.isRead) return;
+
+  try {
+    await markNotificationRead(notificationId);
+    item.isRead = true;
+    renderInboxBadge();
+    renderInboxList();
+  } catch (error) {
+    console.error('Gagal menandai notifikasi:', error);
+    showToast('Gagal menandai notifikasi: ' + error.message);
+  }
+}
+
+async function markAllInboxRead() {
+  if (!state.currentUser?.uid) return;
+
+  try {
+    await markAllNotificationsRead(state.currentUser.uid);
+    state.notifications.forEach(item => { item.isRead = true; });
+    renderInboxBadge();
+    renderInboxList();
+    showToast('Semua notifikasi ditandai sudah dibaca.');
+  } catch (error) {
+    console.error('Gagal menandai semua notifikasi:', error);
+    showToast('Gagal menandai semua notifikasi: ' + error.message);
   }
 }
 
@@ -1314,7 +2407,26 @@ async function handleParentTransfer(e) {
 // 5. INISIALISASI SUPABASE & REAL-TIME LISTENER
 // =========================================================
 window.addEventListener('DOMContentLoaded', async () => {
+  setupRupiahInputs();
+  setupPasswordToggles();
+  setupProofDropzone();
   setAuthMode('login');
+
+  // Tutup modal saat klik latar atau tekan Escape
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', event => {
+      if (event.target === overlay) {
+        if (overlay.id === 'joinClassModal') closeJoinClassModal();
+        if (overlay.id === 'inboxModal') closeInbox();
+      }
+    });
+  });
+
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    closeJoinClassModal();
+    closeInbox();
+  });
 
   if (!isSupabaseConfigured()) {
     console.warn('Supabase belum dikonfigurasi. Isi supabase-config.js.');
