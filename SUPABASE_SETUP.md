@@ -62,7 +62,7 @@ Sekaligus membuat:
 > jalankan ulang **seluruh** `supabase-schema.sql`. Blok nomor 10 dan 11 bersifat idempotent
 > (aman dijalankan berulang) dan akan menambahkan kolom/tabel/fungsi baru tanpa menghapus data.
 >
-> Setelah skema dijalankan, admin perlu membuka **ikon/ tombol Manajemen Kelas di halaman pilih kelas → Sandi**
+> Setelah skema dijalankan, admin perlu membuka **ikon/ tombol Manajemen Kelas di navbar → Sandi**
 > untuk mengatur sandi pada kelas lama. Kelas tanpa sandi tidak bisa dimasuki orang tua.
 >
 > Sandi manajemen awal bawaan database adalah **Manager123**. Segera ganti setelah login pertama
@@ -76,7 +76,7 @@ Struktur akses:
 
 - **Guru/wali kelas** mengelola kelas yang sedang dibuka dari dalam halaman kelas:
   rekening, kas, iuran, checklist, anggota, dan notifikasi.
-- **Manager sekolah** mengelola daftar kelas dari tombol **🏫 Manajemen Kelas** di halaman pilih kelas.
+- **Manager sekolah** mengelola daftar kelas dari tombol **🏫 Manajemen Kelas** di navbar admin.
   Popup hanya berisi tambah/ubah/hapus kelas, wali kelas, rekening awal, dan sandi kelas.
 - Popup terbuka hanya setelah memasukkan **sandi manajemen** yang disimpan di tabel
   `class_manager_settings` sebagai hash bcrypt.
@@ -90,7 +90,7 @@ Manager123
 **Wajib langsung diganti** setelah login pertama:
 
 1. Login sebagai admin/guru.
-2. Klik **🏫 Manajemen Kelas** di halaman pilih kelas.
+2. Klik **🏫 Manajemen Kelas** di navbar.
 3. Masukkan `Manager123`.
 4. Di dalam popup, cari **Ganti Sandi Manajemen**, isi sandi lama dan sandi baru minimal 8 karakter.
 5. Popup otomatis terkunci lagi; gunakan sandi baru untuk membuka berikutnya.
@@ -329,7 +329,7 @@ Tes admin:
 
 1. Logout → login memakai akun admin (`adminscc@gmail.com` / sandi admin).
 2. Masukkan **Kunci Izin Admin** (`ADMIN_ACCESS_KEY`).
-3. Klik **🏫 Manajemen Kelas** di halaman pilih kelas → masukkan **Sandi Manajemen** (`Manager123` bila belum diganti).
+3. Klik **🏫 Manajemen Kelas** di navbar → masukkan **Sandi Manajemen** (`Manager123` bila belum diganti).
 4. Di popup, tambah/ubah/hapus kelas dan atur sandi kelas.
 5. Pilih kelas → atur periode & nominal kas, tambah iuran, checklist, anggota, atau kirim notifikasi.
 6. Tambah program iuran → notifikasi otomatis masuk ke inbox orang tua.
@@ -413,7 +413,7 @@ Pastikan HP/emulator punya koneksi internet.
 | `Terlalu banyak percobaan. Coba lagi 15 menit lagi.` | Tunggu 15 menit, atau reset kode pemulihan lewat Dashboard Supabase. |
 | `relation "public.classes" does not exist` | Belum menjalankan `supabase-schema.sql`. |
 | `relation "public.class_members" does not exist` (atau `dues`/`due_payments`/`notifications`) | Database lama belum diperbarui. Jalankan ulang **seluruh** `supabase-schema.sql` (blok 10). |
-| Kelas tidak bisa dimasuki orang tua | Admin belum mengatur sandi kelas. Buka tombol **🏫 Manajemen Kelas** di halaman pilih kelas → **Sandi**, minimal 4 karakter. |
+| Kelas tidak bisa dimasuki orang tua | Admin belum mengatur sandi kelas. Buka tombol **🏫 Manajemen Kelas** di navbar → **Sandi**, minimal 4 karakter. |
 | Popup **Manajemen Kelas** tidak bisa dibuka | Sandi manajemen salah atau database belum memakai skema terbaru. Sandi bawaan adalah `Manager123`; jalankan seluruh `supabase-schema.sql` dan ganti sandi lewat popup. |
 | Popup manajemen terkunci | Salah 5 kali. Tunggu 15 menit atau atur ulang via SQL: `update public.class_manager_settings set failed_attempts = 0, locked_until = null where id = true;` |
 | `Sandi kelas salah` | Sandi berbeda dengan yang diatur admin. Minta wali kelas mengatur ulang sandi. |

@@ -1037,11 +1037,6 @@ function goToClassSelect() {
 }
 
 function renderClassCards() {
-  const managerBtn = document.getElementById('classManagerLaunchBtn');
-  if (managerBtn) {
-    managerBtn.classList.toggle('hidden', state.authRole !== 'guru');
-  }
-
   const query = document.getElementById('searchClassInput').value.toLowerCase();
   const grade = document.getElementById('gradeFilterSelect').value;
   const container = document.getElementById('classGridContainer');
@@ -1097,6 +1092,12 @@ function renderClassCards() {
       </div>
     `;
   }).join('');
+
+  // Tombol Manajemen Kelas hanya untuk guru, diletakkan di luar halaman kelas (halaman pemilihan kelas).
+  const btnMgr = document.getElementById('btnClassManager');
+  if (btnMgr) {
+    btnMgr.style.display = state.authRole === 'guru' ? 'inline-block' : 'none';
+  }
 }
 
 function selectClassAndEnter(classId) {

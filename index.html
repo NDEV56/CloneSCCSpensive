@@ -296,11 +296,15 @@
             <p>SMP Masyithoh Kroya — Pilih kelas terlebih dahulu sebelum masuk ke dashboard kas & rekening.</p>
           </div>
         </div>
-        <div class="filter-controls">
-          <button type="button" id="classManagerLaunchBtn" class="glass-btn btn-accent-yellow hidden"
-            onclick="openClassManagerModal()">
+        <div class="class-select-actions">
+          <button type="button" id="btnClassManager" class="glass-btn btn-accent-yellow" onclick="openClassManagerModal()" style="display:none;">
             🏫 Manajemen Kelas
           </button>
+          <button type="button" class="glass-btn btn-outline" onclick="openChangePassword()">Ganti Sandi</button>
+          <button type="button" class="glass-btn btn-outline" onclick="goToClassSelect()">Ganti Kelas</button>
+          <button type="button" class="glass-btn btn-danger" onclick="logout()">Keluar</button>
+        </div>
+        <div class="filter-controls">
           <input type="text" id="searchClassInput" class="glass-input" placeholder="Cari kelas atau wali kelas..."
             oninput="renderClassCards()" />
           <select id="gradeFilterSelect" class="glass-input" onchange="renderClassCards()">
