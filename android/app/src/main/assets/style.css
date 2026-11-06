@@ -1896,16 +1896,36 @@ body {
   cursor: pointer;
   background: rgba(4, 25, 6, 0.55);
   transition: 0.2s;
+  display: block;
 }
 
 .proof-dropzone:hover,
-.proof-dropzone.is-dragover {
+.proof-dropzone.is-dragover,
+.proof-dropzone.is-touching {
   border-color: var(--accent-lime);
   background: rgba(116, 242, 27, 0.1);
 }
 
 .proof-dropzone.has-file {
   border-style: solid;
+}
+
+/* Input file: visual tersembunyi tapi masih bisa diklik/disentuh (overlay di atas label) */
+.proof-dropzone .proof-file-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+  margin: 0;
+}
+
+.proof-dropzone > * {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
 }
 
 .proof-icon {
@@ -1932,6 +1952,31 @@ body {
   max-height: 200px;
   border-radius: 12px;
   object-fit: contain;
+}
+
+.proof-remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(242, 242, 242, 0.3);
+  background: rgba(239, 68, 68, 0.9);
+  color: #fff;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: 0.2s;
+}
+
+.proof-remove:hover {
+  background: #ef4444;
+  border-color: #fecaca;
 }
 
 .proof-link-row {

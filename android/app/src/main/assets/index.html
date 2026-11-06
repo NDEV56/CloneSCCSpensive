@@ -790,19 +790,22 @@
               <div class="form-group">
                 <label>Bukti Pembayaran (Wajib Foto)</label>
                 <input type="hidden" id="tfDueId" value="" />
-                <div id="proofDropzone" class="proof-dropzone" onclick="pickProofFile(event)">
-                  <input type="file" id="tfProof" accept="image/*" class="hidden"
+                <!-- Label yang terhubung langsung ke input file, mudah diakses sentuh di mobile -->
+                <label id="proofDropzoneLabel" class="proof-dropzone" for="tfProof" role="button" aria-label="Pilih bukti pembayaran foto">
+                  <!-- Input file secara visual tersembunyi tapi masih bisa diklik/disentuh (tidak pakai display:none) -->
+                  <input type="file" id="tfProof" accept="image/*" class="proof-file-input"
                     onchange="handleProofSelected(event)" />
                   <div id="proofEmpty">
                     <span class="proof-icon">📷</span>
-                    <strong>Tarik &amp; lepas foto di sini</strong>
-                    <small>atau klik untuk memilih dari file / galeri. Format JPG/PNG, maksimal 5 MB.</small>
+                    <strong>Pilih foto bukti</strong>
+                    <small>Klik/telepon untuk ambil dari kamera / galeri. Format JPG/PNG, maksimal 5 MB.</small>
                   </div>
                   <div id="proofPreviewWrap" class="hidden">
                     <img id="proofPreview" alt="Pratinjau bukti pembayaran" />
                     <small id="proofFileName"></small>
+                    <button type="button" class="proof-remove" onclick="clearProofFile(event)">×</button>
                   </div>
-                </div>
+                </label>
                 <small class="field-hint">Foto struk / bukti transfer wajib dilampirkan agar wali kelas bisa memverifikasi.</small>
               </div>
 

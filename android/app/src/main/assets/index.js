@@ -2226,7 +2226,7 @@ function openTransferForDue(dueId) {
     select.value = dueId;
   }
   syncBillAmount();
-  document.getElementById('proofDropzone')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  document.getElementById('proofDropzoneLabel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function syncBillAmount() {
@@ -2262,6 +2262,8 @@ function isImageProof(file) {
 }
 
 function pickProofFile(event) {
+  // Compatibel dengan pemanggilan lama; sebenarnya label <label for="tfProof">
+  // sudah menangani klik/sentuh secara native, termasuk di mobile.
   if (event) {
     event.preventDefault();
     event.stopPropagation();
@@ -2278,10 +2280,12 @@ function handleProofSelected(event) {
 function setProofFile(file) {
   if (!isImageProof(file)) {
     showToast('Bukti pembayaran harus berupa foto (JPG/PNG/WebP).');
+    document.getElementById('tfProof').value = '';
     return;
   }
   if (file.size > MAX_PROOF_BYTES) {
     showToast('Ukuran foto maksimal 5 MB.');
+    document.getElementById('tfProof').value = '';
     return;
   }
 
@@ -2300,10 +2304,15 @@ function setProofFile(file) {
   fileName.textContent = file.name + ' • ' + (file.size / 1024).toFixed(0) + ' KB';
   previewWrap.classList.remove('hidden');
   emptyState.classList.add('hidden');
-  document.getElementById('proofDropzone').classList.add('has-file');
+  const zone = document.getElementById('proofDropzoneLabel');
+  if (zone) zone.classList.add('has-file');
 }
 
-function clearProofFile() {
+function clearProofFile(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
   state.proofFile = null;
   if (state.proofUrl && state.proofUrl.startsWith('blob:')) {
     URL.revokeObjectURL(state.proofUrl);
@@ -2317,15 +2326,16 @@ function clearProofFile() {
   const emptyState = document.getElementById('proofEmpty');
   if (previewWrap) previewWrap.classList.add('hidden');
   if (emptyState) emptyState.classList.remove('hidden');
-  const zone = document.getElementById('proofDropzone');
+  const zone = document.getElementById('proofDropzoneLabel');
   if (zone) zone.classList.remove('has-file');
 }
 
 function setupProofDropzone() {
-  const zone = document.getElementById('proofDropzone');
+  const zone = document.getElementById('proofDropzoneLabel');
   if (!zone || zone.dataset.ready === 'true') return;
   zone.dataset.ready = 'true';
 
+  // Drag & drop tetap dipertahankan untuk desktop
   ['dragenter', 'dragover'].forEach(eventName => {
     zone.addEventListener(eventName, event => {
       event.preventDefault();
@@ -2346,6 +2356,11 @@ function setupProofDropzone() {
     const file = event.dataTransfer?.files && event.dataTransfer.files[0];
     if (file) setProofFile(file);
   });
+
+  // Feedback visual saat sentuh (mobile-friendly)
+  zone.addEventListener('touchstart', () => zone.classList.add('is-touching'), { passive: true });
+  zone.addEventListener('touchend', () => zone.classList.remove('is-touching'), { passive: true });
+  zone.addEventListener('touchcancel', () => zone.classList.remove('is-touching'), { passive: true });
 }
 
 async function handleParentTransfer(e) {
